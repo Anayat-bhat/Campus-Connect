@@ -1,0 +1,5 @@
+# CampusConnect: Smart Campus Lost & Found Management System
+# Core requirements (Tkinter and SQLite are part of Python Standard Library)
+
+matplotlib>=3.7.0
+pandas>=2.0.0
