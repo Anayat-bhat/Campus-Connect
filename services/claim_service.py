@@ -26,12 +26,18 @@ class ClaimService:
         item_repo: Optional[ItemRepository] = None,
         claim_repo: Optional[ClaimRepository] = None,
         user_repo: Optional[UserRepository] = None,
+        notif_service: Optional[Any] = None,
         db_path: Optional[str] = None
     ) -> None:
         self.db_path = db_path
         self.item_repo = item_repo if item_repo is not None else ItemRepository(db_path)
         self.claim_repo = claim_repo if claim_repo is not None else ClaimRepository(db_path)
         self.user_repo = user_repo if user_repo is not None else UserRepository(db_path)
+        if notif_service is not None:
+            self.notif_service = notif_service
+        else:
+            from services.notification_service import NotificationService
+            self.notif_service = NotificationService(db_path=db_path)
 
     def submit_claim(self, item_id: int, claimant_id: int, proof_description: str) -> Claim:
         """
@@ -71,6 +77,10 @@ class ClaimService:
 
         claim_id = self.claim_repo.create(claim)
         claim.id = claim_id
+
+        if self.notif_service:
+            self.notif_service.alert_claim_submitted(claim, item)
+
         return claim
 
     def approve_claim(
@@ -151,7 +161,14 @@ class ClaimService:
                 (item_id, claim_id, reviewer_id, claimant_id, verification_notes)
             )
 
-            return True
+        # Notify claimant of approval
+        if self.notif_service:
+            claim = self.claim_repo.get_by_id(claim_id)
+            item = self.item_repo.get_by_id(item_id)
+            if claim and item:
+                self.notif_service.alert_claim_decision(claim, item, approved=True, notes=verification_notes)
+
+        return True
 
     def reject_claim(
         self,
@@ -203,7 +220,14 @@ class ClaimService:
                     (item_id,)
                 )
 
-            return True
+        # Notify claimant of rejection
+        if self.notif_service:
+            claim = self.claim_repo.get_by_id(claim_id)
+            item = self.item_repo.get_by_id(item_id)
+            if claim and item:
+                self.notif_service.alert_claim_decision(claim, item, approved=False, notes=reason)
+
+        return True
 
     def get_return_record(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Fetch audit return receipt for a returned item."""

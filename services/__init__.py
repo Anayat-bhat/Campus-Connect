@@ -23,6 +23,9 @@ from services.claim_service import (
     ClaimService,
     ClaimWorkflowError,
 )
+from services.notification_service import (
+    NotificationService,
+)
 
 __all__ = [
     "SessionManager",
@@ -38,4 +41,5 @@ __all__ = [
     "MatchResult",
     "ClaimService",
     "ClaimWorkflowError",
+    "NotificationService",
 ]

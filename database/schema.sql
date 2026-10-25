@@ -88,7 +88,30 @@ CREATE TABLE IF NOT EXISTS item_returns (
 );
 
 -- ----------------------------------------------------------------------------
--- 5. PERFORMANCE INDEXES
+-- 5. NOTIFICATIONS TABLE
+-- Real-time in-app alerts for match discoveries, claim submissions, and decisions.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN (
+        'MATCH_FOUND',
+        'CLAIM_SUBMITTED',
+        'CLAIM_APPROVED',
+        'CLAIM_REJECTED',
+        'SYSTEM'
+    )) DEFAULT 'SYSTEM',
+    related_item_id INTEGER,
+    is_read INTEGER NOT NULL DEFAULT 0 CHECK(is_read IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_item_id) REFERENCES items(id) ON DELETE SET NULL
+);
+
+-- ----------------------------------------------------------------------------
+-- 6. PERFORMANCE INDEXES
 -- Optimize searching, filtering, and foreign key join lookups.
 -- ----------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_items_type_status ON items(type, status);
@@ -101,3 +124,4 @@ CREATE INDEX IF NOT EXISTS idx_claims_claimant_id ON claims(claimant_id);
 CREATE INDEX IF NOT EXISTS idx_claims_status ON claims(status);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read);

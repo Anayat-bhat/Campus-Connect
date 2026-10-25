@@ -31,8 +31,11 @@ class MainWindow(ttk.Frame):
         self.session = session if session is not None else default_session_manager
         self.on_logout = on_logout
         self.item_repo = ItemRepository(db_path)
+        from services.notification_service import NotificationService
+        self.notif_service = NotificationService(db_path=db_path)
 
         self._build_ui()
+        self.update_notification_badge()
 
     def _build_ui(self) -> None:
         """Construct dashboard header and primary navigation tabs."""
@@ -58,13 +61,21 @@ class MainWindow(ttk.Frame):
         )
         sub_lbl.pack(anchor="w")
 
-        # User Profile & Logout on right
+        # User Profile, Notifications & Logout on right
         user_frame = ttk.Frame(navbar, style="Sidebar.TFrame")
         user_frame.pack(side="right")
 
         user = self.session.current_user
         full_name = user.full_name if user else "Guest"
         role_tag = f"[{user.role.upper()}]" if user else ""
+
+        # Notification Alert Bell
+        self.notif_btn = ttk.Button(
+            user_frame,
+            text="🔔 Alerts (0)",
+            command=self._on_open_notifications
+        )
+        self.notif_btn.pack(side="left", padx=(0, 12))
 
         user_chip = ttk.Label(
             user_frame,
@@ -146,11 +157,47 @@ class MainWindow(ttk.Frame):
         elif selected_index == 4:
             self.analytics_tab.refresh()
 
+    def update_notification_badge(self) -> None:
+        """Query and display live unread alert count in navbar."""
+        user = self.session.current_user
+        if not user:
+            self.notif_btn.configure(text="🔔 Alerts (0)")
+            return
+        unread = self.notif_service.get_unread_count(user.id)
+        badge_text = f"🔔 Alerts ({unread})" if unread > 0 else "🔔 Alerts (0)"
+        self.notif_btn.configure(text=badge_text)
+
+    def _on_open_notifications(self) -> None:
+        """Open the notification center modal."""
+        user = self.session.current_user
+        if not user:
+            return
+        from gui.notification_dialog import NotificationCenterDialog
+        NotificationCenterDialog(
+            parent=self,
+            user_id=user.id,
+            db_path=self.db_path,
+            on_notifications_changed=self.update_notification_badge
+        )
+
     def _on_item_created(self, item_id: int) -> None:
-        """Handle new item submission by refreshing views and switching to search tab."""
+        """Handle new item submission, evaluate smart match alerts, and refresh tabs."""
+        new_item = self.item_repo.get_by_id(item_id)
+        if new_item:
+            # Trigger background match notifications to other students
+            alerts = self.notif_service.scan_and_alert_matches(new_item, min_threshold=55.0)
+            if alerts:
+                messagebox.showinfo(
+                    "🤖 Smart Matches Found",
+                    f"CampusConnect detected {len(alerts)} potential matching counterpart item(s)!\n"
+                    f"Automated match alerts have been sent to their respective reporters.",
+                    parent=self
+                )
+
         self.search_tab.refresh()
         self.my_items_tab.refresh()
         self.analytics_tab.refresh()
+        self.update_notification_badge()
         self.notebook.select(self.search_tab)
 
     def _on_claim_item(self, item: Item) -> None:
@@ -165,10 +212,11 @@ class MainWindow(ttk.Frame):
         )
 
     def _on_claim_updated(self) -> None:
-        """Refresh all relevant tabs after a claim is created or reviewed."""
+        """Refresh all relevant tabs and notification count after a claim event."""
         self.search_tab.refresh()
         self.my_items_tab.refresh()
         self.claims_tab.refresh()
+        self.update_notification_badge()
 
     def _handle_logout(self) -> None:
         """Confirm and execute session logout."""

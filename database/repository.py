@@ -11,6 +11,7 @@ from database.connection import get_connection, get_db_cursor
 from models.user import User
 from models.item import Item
 from models.claim import Claim
+from models.notification import Notification
 
 
 class UserRepository:
@@ -525,4 +526,125 @@ class ClaimRepository:
             reviewed_at=row["reviewed_at"],
             reviewed_by=row["reviewed_by"],
             review_notes=row["review_notes"]
+        )
+
+
+class NotificationRepository:
+    """Data access object for in-app user notifications."""
+
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        self.db_path = db_path
+
+    def create(self, notification: Notification) -> int:
+        """Validate and insert a new notification."""
+        notification.validate()
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                """
+                INSERT INTO notifications (user_id, title, message, type, related_item_id, is_read)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    notification.user_id,
+                    notification.title.strip(),
+                    notification.message.strip(),
+                    notification.type,
+                    notification.related_item_id,
+                    1 if notification.is_read else 0
+                )
+            )
+            return cursor.lastrowid
+
+    def get_by_id(self, notification_id: int) -> Optional[Notification]:
+        """Fetch notification by primary key ID."""
+        conn = get_connection(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, user_id, title, message, type, related_item_id, is_read, created_at
+                FROM notifications WHERE id = ?
+                """,
+                (notification_id,)
+            )
+            row = cursor.fetchone()
+            return self._row_to_notification(row) if row else None
+        finally:
+            conn.close()
+
+    def list_by_user(
+        self,
+        user_id: int,
+        unread_only: bool = False,
+        limit: int = 50
+    ) -> List[Notification]:
+        """List recent notifications for a user, optionally filtering by unread status."""
+        query = """
+            SELECT id, user_id, title, message, type, related_item_id, is_read, created_at
+            FROM notifications WHERE user_id = ?
+        """
+        params = [user_id]
+        if unread_only:
+            query += " AND is_read = 0"
+
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+
+        conn = get_connection(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return [self._row_to_notification(row) for row in cursor.fetchall()]
+        finally:
+            conn.close()
+
+    def count_unread(self, user_id: int) -> int:
+        """Count unread notification messages for a user."""
+        conn = get_connection(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+            return row["count"] if row else 0
+        finally:
+            conn.close()
+
+    def mark_as_read(self, notification_id: int) -> bool:
+        """Mark a single notification as read."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                "UPDATE notifications SET is_read = 1 WHERE id = ?",
+                (notification_id,)
+            )
+            return cursor.rowcount > 0
+
+    def mark_all_as_read(self, user_id: int) -> int:
+        """Mark all unread notifications for a user as read."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0",
+                (user_id,)
+            )
+            return cursor.rowcount
+
+    def delete(self, notification_id: int) -> bool:
+        """Delete a notification by ID."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+            return cursor.rowcount > 0
+
+    @staticmethod
+    def _row_to_notification(row: sqlite3.Row) -> Notification:
+        return Notification(
+            id=row["id"],
+            user_id=row["user_id"],
+            title=row["title"],
+            message=row["message"],
+            type=row["type"],
+            related_item_id=row["related_item_id"],
+            is_read=bool(row["is_read"]),
+            created_at=row["created_at"]
         )

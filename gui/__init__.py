@@ -13,6 +13,7 @@ from gui.match_dialog import MatchesDialog
 from gui.claim_dialog import ClaimItemDialog
 from gui.claims_manager_frame import ClaimsManagerFrame
 from gui.analytics_frame import AnalyticsFrame
+from gui.notification_dialog import NotificationCenterDialog
 
 __all__ = [
     "apply_theme",
@@ -28,4 +29,5 @@ __all__ = [
     "ClaimItemDialog",
     "ClaimsManagerFrame",
     "AnalyticsFrame",
+    "NotificationCenterDialog",
 ]
