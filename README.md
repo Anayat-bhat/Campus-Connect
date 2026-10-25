@@ -279,8 +279,165 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
-### Upcoming Phase (Phase 10)
-- **Phase 10**: Project Packaging, User Guide, and Viva Presentation Defense
+### Phase 10: Project Packaging, User Guide, and Viva Presentation Defense
+- **Objectives**: Prepare complete distribution packaging, automated one-click launcher, seed database generator, architecture diagrams, and academic viva voce defense documentation.
+- **Deliverables Completed**:
+  - `seed_demo_data.py`: Pre-populates realistic university items across libraries, labs, cafeteria, and sports complexes, including active pending claims and historical returned receipts.
+  - `run.bat`: Windows one-click application launcher that verifies Python runtime, activates virtual environment if present, and launches `main.py`.
+  - **Comprehensive Viva Voce Technical Defense**: Complete academic examination prep covering architectural decisions, ACID SQLite transactions, PBKDF2 hashing, and multi-factor matching math.
+- **Acceptance Criteria**: One-click startup works smoothly; demo dataset showcases populated UI and analytics charts; all 66 tests passing across entire system.
+
+---
+
+## 🏛️ System Architecture
+
+CampusConnect follows a strict **4-Tier Layered Architecture**:
+
+```mermaid
+graph TD
+    subgraph Presentation_Tier ["1. Presentation UI Tier (Tkinter / TTK)"]
+        A[main.py: CampusConnectApp]
+        B[gui/auth_window.py: Sign In & Register]
+        C[gui/main_window.py: Navigation Shell]
+        D[gui/search_frame.py: Multi-Filter Directory]
+        E[gui/report_item_frame.py: Lost/Found Form]
+        F[gui/my_items_frame.py: Personal Reports]
+        G[gui/claims_manager_frame.py: Claim Queue]
+        H[gui/analytics_frame.py: Matplotlib Canvas]
+        I[gui/match_dialog.py: Smart Match Inspector]
+        J[gui/claim_dialog.py: Proof Submission]
+    end
+
+    subgraph Business_Logic_Tier ["2. Business Logic Tier (Services)"]
+        K[services/auth_service.py: PBKDF2 Authentication]
+        L[services/session_manager.py: RBAC Session State]
+        M[services/matching_service.py: Jaccard & Stemming Engine]
+        N[services/claim_service.py: ACID Claim Handover Workflow]
+        O[analytics/metrics.py: Pandas Aggregation Engine]
+        P[analytics/chart_builder.py: Matplotlib Figures]
+    end
+
+    subgraph Domain_Tier ["3. Domain Entity Tier (Models)"]
+        Q[models/user.py: User Model & Invariants]
+        R[models/item.py: Item Model & Status Invariants]
+        S[models/claim.py: Claim Model & Invariants]
+    end
+
+    subgraph Persistence_Tier ["4. Data Persistence Tier (SQLite 3)"]
+        T[database/connection.py: Connection Factory & Transactions]
+        U[database/repository.py: User, Item, Claim Repositories]
+        V[(data/campus_connect.db: Relational SQLite Store)]
+    end
+
+    Presentation_Tier --> Business_Logic_Tier
+    Business_Logic_Tier --> Domain_Tier
+    Business_Logic_Tier --> Persistence_Tier
+    Persistence_Tier --> Domain_Tier
+```
+
+---
+
+## 🗄️ Database Entity-Relationship Diagram (ERD)
+
+```mermaid
+erDiagram
+    USERS ||--o{ ITEMS : "reports"
+    USERS ||--o{ CLAIMS : "files"
+    USERS ||--o{ ITEM_RETURNS : "hands over / receives"
+    ITEMS ||--o{ CLAIMS : "claimed by"
+    ITEMS ||--o| ITEM_RETURNS : "returned via (1:1)"
+    CLAIMS ||--o| ITEM_RETURNS : "verified by (1:1)"
+
+    USERS {
+        int id PK
+        string username UK
+        string password_hash
+        string salt
+        string full_name
+        string email UK
+        string role
+        string created_at
+    }
+
+    ITEMS {
+        int id PK
+        string type
+        int user_id FK
+        string title
+        string category
+        string description
+        string event_date
+        string location
+        string image_path
+        string status
+        string created_at
+    }
+
+    CLAIMS {
+        int id PK
+        int item_id FK
+        int claimant_id FK
+        string proof_description
+        string status
+        string submitted_at
+        string reviewed_at
+        int reviewed_by FK
+        string review_notes
+    }
+
+    ITEM_RETURNS {
+        int id PK
+        int item_id FK,UK
+        int claim_id FK,UK
+        int handed_over_by FK
+        int received_by FK
+        string return_date
+        string verification_notes
+    }
+```
+
+---
+
+## 🎓 Academic Viva Voce Defense Guide (Top 10 Q&A)
+
+### Q1: Why was SQLite selected over client-server engines like MySQL or PostgreSQL?
+> **Answer**: SQLite is serverless, zero-configuration, and fully self-contained. It stores the entire relational database in a single portable file (`data/campus_connect.db`), perfectly matching standalone campus laboratory applications. SQLite delivers full ACID compliance and zero external server administration overhead.
+
+### Q2: Why is `PRAGMA foreign_keys = ON;` explicitly executed on every database connection?
+> **Answer**: For historical backward compatibility with SQLite 2, SQLite 3 disables foreign key constraint checking by default. Executing `PRAGMA foreign_keys = ON;` upon connection initialization guarantees referential integrity, cascading deletes, and strict foreign key verification at runtime.
+
+### Q3: How are passwords secured in CampusConnect?
+> **Answer**: Passwords are never stored in plaintext. They are protected using `PBKDF2-HMAC-SHA256` from Python's standard `hashlib` library using **100,000 iterations** combined with a cryptographically secure 16-byte random salt generated via `secrets.token_hex(16)`. This algorithm mitigates rainbow table attacks and slows down brute-force cracking.
+
+### Q4: How does the explainable matching algorithm work?
+> **Answer**: It calculates a weighted multi-factor compatibility score across 4 distinct attributes:
+> 1. **Category Concordance (25%)**: Exact category match required; category mismatches are capped at 35% to eliminate false positives.
+> 2. **Semantic Text Similarity (40%)**: Words are normalized, stripped of common stopwords, and stemmed to their morphological root (e.g., `charger` ↔ `charging`). Jaccard set index is combined with containment overlap ratio.
+> 3. **Spatial Location Proximity (20%)**: Token overlap and substring containment (e.g. `Library` in `Library 2nd Floor`).
+> 4. **Temporal Date Proximity (15%)**: Days elapsed difference using linear decay.
+> Full rationale text strings are produced to explain why the item was suggested.
+
+### Q5: How does the system handle competing claims on the same found item?
+> **Answer**: When an administrator approves a verified claim in `approve_claim()`, an atomic SQLite transaction automatically:
+> 1. Sets the approved claim status to `APPROVED`.
+> 2. Sets all other pending claims on that item to `REJECTED` with a note `"Another claim was verified and approved."`
+> 3. Transitions the item status to `RETURNED`.
+> 4. Inserts a permanent audit record into `item_returns`.
+
+### Q6: How does CampusConnect ensure safe deletion and audit integrity?
+> **Answer**: `ItemRepository.delete()` checks authorization (owner or administrator) and strictly forbids deleting items whose status is `RETURNED`. This invariant ensures completed handovers cannot be erased by users, maintaining auditability for campus security.
+
+### Q7: How does CampusConnect defend against SQL Injection?
+> **Answer**: Dynamic string concatenation in SQL statements is strictly prohibited throughout the codebase. Every query in `ItemRepository`, `UserRepository`, and `ClaimRepository` utilizes **parameterized SQL queries** (`?` placeholders), ensuring user inputs are treated exclusively as literal data values and cannot alter SQL command syntax.
+
+### Q8: How is Matplotlib integrated into Tkinter without GUI freezing or memory leaks?
+> **Answer**: Matplotlib is configured with the headless `Agg` backend (`matplotlib.use('Agg')`). Charts are mounted into Tkinter frames using `FigureCanvasTkAgg`. Whenever a chart is refreshed or the frame is destroyed, `plt.close(fig)` is called to reclaim memory and prevent resource leaks.
+
+### Q9: Why is the Repository Pattern utilized in the architecture?
+> **Answer**: The Repository pattern abstracts data persistence operations away from GUI views and business services. If the database backend is migrated from SQLite to PostgreSQL in the future, only the repository implementation needs modification, leaving the GUI and domain models unchanged.
+
+### Q10: How does the Session Manager implement Role-Based Access Control (RBAC)?
+> **Answer**: `SessionManager` tracks the in-memory authenticated user and provides higher-order function decorators: `@require_auth`, `@require_role('admin')`, and `@require_admin`. When decorating protected operations, they verify user authentication and authorization, raising `AuthenticationError` or `AuthorizationError` if permissions are insufficient.
 
 ---
 
@@ -303,13 +460,19 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 4. Initialize Local SQLite Database
+### 4. Seed Realistic Campus Demo Data (Optional for Viva / Demo)
 ```powershell
-python database/connection.py
+python seed_demo_data.py
 ```
-*(Creates `data/campus_connect.db` and seeds default administrator: `admin` / `Admin@Campus2026`)*
+*(Creates `data/campus_connect.db`, default administrator `admin` / `Admin@Campus2026`, and 5 student accounts with 12 items)*
 
-### 5. Launch the Application
+### 5. Launch Application (Two Options)
+**Option A: Windows Batch Launcher**
+```powershell
+.\run.bat
+```
+
+**Option B: Direct Python Entry Point**
 ```powershell
 python main.py
 ```
@@ -338,9 +501,11 @@ OK
 Campus-Connect/
 │
 ├── main.py                     # Primary execution entry point & view controller
+├── seed_demo_data.py           # Demonstration database seeder for viva presentation
+├── run.bat                     # Windows one-click startup launcher
 ├── requirements.txt            # Python dependencies (Matplotlib, Pandas)
 ├── .gitignore                  # Git ignore rules
-├── README.md                   # Comprehensive phase-wise project manual
+├── README.md                   # Comprehensive phase-wise project manual & viva guide
 │
 ├── database/                   # Database persistence tier
 │   ├── __init__.py
