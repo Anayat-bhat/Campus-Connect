@@ -111,6 +111,17 @@ class MainWindow(ttk.Frame):
         )
         self.notebook.add(self.my_items_tab, text="  📋 My Reports  ")
 
+        # Tab 4: Claims & Handovers
+        from gui.claims_manager_frame import ClaimsManagerFrame
+        claims_tab_title = "  🛡️ Claim Queue  " if self.session.is_admin() else "  ✋ My Claims  "
+        self.claims_tab = ClaimsManagerFrame(
+            parent=self.notebook,
+            db_path=self.db_path,
+            session=self.session,
+            on_claim_updated=self._on_claim_updated
+        )
+        self.notebook.add(self.claims_tab, text=claims_tab_title)
+
         # Listen for tab changes to auto-refresh data
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -121,6 +132,8 @@ class MainWindow(ttk.Frame):
             self.search_tab.refresh()
         elif selected_index == 2:
             self.my_items_tab.refresh()
+        elif selected_index == 3:
+            self.claims_tab.refresh()
 
     def _on_item_created(self, item_id: int) -> None:
         """Handle new item submission by refreshing views and switching to search tab."""
@@ -129,12 +142,21 @@ class MainWindow(ttk.Frame):
         self.notebook.select(self.search_tab)
 
     def _on_claim_item(self, item: Item) -> None:
-        """Placeholder hook for claiming items (fully wired in Phase 7)."""
-        messagebox.showinfo(
-            "Claim Request",
-            f"Claiming #{item.id} ('{item.title}'). The claim workflow will be launched.",
-            parent=self
+        """Open the claim submission dialog for an item."""
+        from gui.claim_dialog import ClaimItemDialog
+        ClaimItemDialog(
+            parent=self,
+            item=item,
+            db_path=self.db_path,
+            session=self.session,
+            on_claim_submitted=lambda _: self._on_claim_updated()
         )
+
+    def _on_claim_updated(self) -> None:
+        """Refresh all relevant tabs after a claim is created or reviewed."""
+        self.search_tab.refresh()
+        self.my_items_tab.refresh()
+        self.claims_tab.refresh()
 
     def _handle_logout(self) -> None:
         """Confirm and execute session logout."""

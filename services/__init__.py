@@ -19,6 +19,10 @@ from services.matching_service import (
     MatchingService,
     MatchResult,
 )
+from services.claim_service import (
+    ClaimService,
+    ClaimWorkflowError,
+)
 
 __all__ = [
     "SessionManager",
@@ -32,4 +36,6 @@ __all__ = [
     "RegistrationError",
     "MatchingService",
     "MatchResult",
+    "ClaimService",
+    "ClaimWorkflowError",
 ]
