@@ -208,8 +208,33 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
-### Upcoming Phases (Phase 7 – Phase 10)
-- **Phase 7**: Claims & Return Handover Workflow with ACID Transactions
+### Phase 7: Claims & Return Handover Workflow with ACID Transactions
+- **Objectives**: Implement end-to-end claim submission, verification, and return handover workflow guaranteed by atomic ACID SQLite transactions and audit logging.
+- **Components Built**:
+  - `services/claim_service.py`:
+    - `submit_claim()`: Validates distinguishing proof descriptions (min 5 chars), ensures items are type `FOUND` and not already returned, verifies finder cannot claim own found report, checks against duplicate active pending claims, and atomically transitions item to `CLAIM_PENDING`.
+    - `approve_claim()`: Atomic ACID transaction updating claim to `APPROVED`, automatically rejecting any competing pending claims for the same item, transitioning item to `RETURNED`, and writing immutable audit handover records to `item_returns`.
+    - `reject_claim()`: Transitions claim to `REJECTED`; if no remaining pending claims exist on the item, automatically reverts item status back to `OPEN` for other claimants.
+    - `get_return_record()`: Retrieves auditable receipt joining item, verified recipient, and staff handover details.
+    - `list_pending_claims_for_review()`: Provides enriched pending review queue for administrators.
+  - `gui/claim_dialog.py`: Modal dialog for students to submit private distinguishing proof details.
+  - `gui/claims_manager_frame.py`: Dual-role claims management view:
+    - **Students**: Tracks status of submitted claims with live status badges (`PENDING`, `APPROVED`, `REJECTED`) and reviewer feedback.
+    - **Administrators**: Verification queue inspecting private proof notes with one-click "✓ Approve Handover" and "✗ Reject Claim" actions.
+  - `gui/main_window.py`: Integrated Claims tab and wired item details claim trigger.
+- **Files Created / Updated**:
+  - `services/claim_service.py`: `ClaimService`, `ClaimWorkflowError`.
+  - `services/__init__.py`: Exported claim service symbols.
+  - `gui/claim_dialog.py`: `ClaimItemDialog`.
+  - `gui/claims_manager_frame.py`: `ClaimsManagerFrame`.
+  - `gui/main_window.py`: Wired claims tab and submission callbacks.
+  - `gui/__init__.py`: Exported new GUI dialogs.
+  - `tests/test_claim_service.py`: 5 automated tests validating submissions, invariant violations, atomic multi-claim handover, and status rollback.
+- **Acceptance Criteria**: Atomic handovers recorded; competing claims rejected automatically; return logs preserved; 57/57 tests pass.
+
+---
+
+### Upcoming Phases (Phase 8 – Phase 10)
 - **Phase 8**: Dynamic Analytics Dashboard with Matplotlib Visualizations
 - **Phase 9**: End-to-End System Integration & Edge-Case Hardening
 - **Phase 10**: Project Packaging, User Guide, and Viva Presentation Defense
@@ -258,7 +283,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 52 tests in 7.586s
+Ran 57 tests in 11.381s
 OK
 ```
 
@@ -290,7 +315,8 @@ Campus-Connect/
 │   ├── __init__.py
 │   ├── auth_service.py         # Registration, login, password management
 │   ├── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
-│   └── matching_service.py     # Explainable multi-factor Lost/Found matcher
+│   ├── matching_service.py     # Explainable multi-factor Lost/Found matcher
+│   └── claim_service.py        # Claim submission, ACID review & handover records
 │
 ├── gui/                        # Presentation UI tier
 │   ├── __init__.py
@@ -301,7 +327,9 @@ Campus-Connect/
 │   ├── report_item_frame.py    # Lost & Found submission form with validation
 │   ├── my_items_frame.py       # Personal reports tracker with safe delete
 │   ├── item_details_dialog.py  # Modal item inspection & action triggers
-│   └── match_dialog.py         # Algorithmic match viewer with explanation breakdown
+│   ├── match_dialog.py         # Algorithmic match viewer with explanation breakdown
+│   ├── claim_dialog.py         # Ownership proof submission modal
+│   └── claims_manager_frame.py # Claims queue and status tracker
 │
 ├── analytics/                  # Matplotlib & Pandas reporting (Phase 8)
 │   └── __init__.py
@@ -314,7 +342,8 @@ Campus-Connect/
 │   ├── test_repository.py      # CRUD, filtering, & safe delete tests (6 tests)
 │   ├── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
 │   ├── test_gui.py             # Presentation layer, filters, & views (6 tests)
-│   └── test_matching_service.py# Multi-factor matching & explainability (7 tests)
+│   ├── test_matching_service.py# Multi-factor matching & explainability (7 tests)
+│   └── test_claim_service.py   # Claim workflows & ACID handover transactions (5 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
