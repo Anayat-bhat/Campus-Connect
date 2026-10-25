@@ -9,6 +9,7 @@ from gui.search_frame import SearchFrame
 from gui.report_item_frame import ReportItemFrame
 from gui.my_items_frame import MyItemsFrame
 from gui.item_details_dialog import ItemDetailsDialog
+from gui.match_dialog import MatchesDialog
 
 __all__ = [
     "apply_theme",
@@ -20,4 +21,5 @@ __all__ = [
     "ReportItemFrame",
     "MyItemsFrame",
     "ItemDetailsDialog",
+    "MatchesDialog",
 ]

@@ -139,6 +139,15 @@ class ItemDetailsDialog(tk.Toplevel):
             )
             claim_btn.pack(side="left", padx=(0, 8))
 
+        # Smart Matches button (matches Lost items against Found or vice versa)
+        match_btn = ttk.Button(
+            action_bar,
+            text="🤖 Smart Matches",
+            style="Secondary.TButton",
+            command=self._on_find_matches
+        )
+        match_btn.pack(side="left", padx=(0, 8))
+
         # Delete button (only if owner or admin, and not already returned)
         can_delete = (is_owner or self.is_admin) and self.item.status != "RETURNED"
         if can_delete:
@@ -157,6 +166,11 @@ class ItemDetailsDialog(tk.Toplevel):
             command=self.destroy
         )
         close_btn.pack(side="right")
+
+    def _on_find_matches(self) -> None:
+        """Launch smart matches dialog."""
+        from gui.match_dialog import MatchesDialog
+        MatchesDialog(parent=self, source_item=self.item, db_path=self.db_path)
 
     def _on_claim(self) -> None:
         if self.on_claim_callback:

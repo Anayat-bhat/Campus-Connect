@@ -183,8 +183,32 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
-### Upcoming Phases (Phase 6 – Phase 10)
-- **Phase 6**: Explainable Multi-Factor Text-Matching Algorithm
+### Phase 6: Explainable Multi-Factor Text-Matching Algorithm
+- **Objectives**: Develop an explainable matching engine that automatically correlates reported Lost items with candidate Found items using semantic keyword tokens, category concordance, spatial location proximity, and temporal proximity.
+- **Components Built**:
+  - `services/matching_service.py`:
+    - **Stopword Removal & Morphological Stemming**: Normalizes English descriptions and stems inflected terms (e.g. "charging", "charger", "headphones").
+    - **Multi-Factor Weighted Scoring**:
+      - Category Concordance (25%): Strict category matching with a heavy penalty cap (<=35%) on category mismatches to prevent false positives.
+      - Salient Text Similarity (40%): Combined Jaccard set index and token containment ratio over titles and descriptions.
+      - Location Proximity (20%): Token overlap and substring containment (e.g., "Library" vs "Library 2nd Floor").
+      - Temporal Proximity (15%): Linear/decay temporal scoring penalizing distant dates.
+    - **Explainability Breakdown (`MatchResult`)**: Returns detailed percentage scores for every individual factor along with natural-language rationale clauses explaining why the match was generated.
+    - **Counterpart Search (`find_matches_for_item`)**: Dynamically queries active database records of opposite type (`LOST` ↔ `FOUND`), scores candidates, and returns top results above a configurable confidence threshold.
+  - `gui/match_dialog.py`: Dedicated interactive modal displaying AI/algorithmic matches, match rationale, and one-click inspection.
+  - `gui/item_details_dialog.py`: Integrated "🤖 Smart Matches" button launching `MatchesDialog` for any selected item.
+- **Files Created / Updated**:
+  - `services/matching_service.py`: `MatchingService`, `MatchResult`.
+  - `services/__init__.py`: Exported matching service symbols.
+  - `gui/match_dialog.py`: Interactive match inspection dialog.
+  - `gui/item_details_dialog.py`: Added Smart Matches launcher.
+  - `gui/__init__.py`: Exported `MatchesDialog`.
+  - `tests/test_matching_service.py`: 7 unit tests validating tokenization, stemming, text similarity, location overlap, date proximity, mismatch penalty, and counterpart discovery.
+- **Acceptance Criteria**: Automated matches scored with explainability; false positives suppressed; 52/52 tests pass.
+
+---
+
+### Upcoming Phases (Phase 7 – Phase 10)
 - **Phase 7**: Claims & Return Handover Workflow with ACID Transactions
 - **Phase 8**: Dynamic Analytics Dashboard with Matplotlib Visualizations
 - **Phase 9**: End-to-End System Integration & Edge-Case Hardening
@@ -234,7 +258,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 45 tests in 6.696s
+Ran 52 tests in 7.586s
 OK
 ```
 
@@ -265,7 +289,8 @@ Campus-Connect/
 ├── services/                   # Business logic tier
 │   ├── __init__.py
 │   ├── auth_service.py         # Registration, login, password management
-│   └── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
+│   ├── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
+│   └── matching_service.py     # Explainable multi-factor Lost/Found matcher
 │
 ├── gui/                        # Presentation UI tier
 │   ├── __init__.py
@@ -275,7 +300,8 @@ Campus-Connect/
 │   ├── search_frame.py         # Real-time search, multi-filters & pagination
 │   ├── report_item_frame.py    # Lost & Found submission form with validation
 │   ├── my_items_frame.py       # Personal reports tracker with safe delete
-│   └── item_details_dialog.py  # Modal item inspection & action triggers
+│   ├── item_details_dialog.py  # Modal item inspection & action triggers
+│   └── match_dialog.py         # Algorithmic match viewer with explanation breakdown
 │
 ├── analytics/                  # Matplotlib & Pandas reporting (Phase 8)
 │   └── __init__.py
@@ -287,7 +313,8 @@ Campus-Connect/
 │   ├── test_models.py          # Domain model invariant tests (6 tests)
 │   ├── test_repository.py      # CRUD, filtering, & safe delete tests (6 tests)
 │   ├── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
-│   └── test_gui.py             # Presentation layer, filters, & views (6 tests)
+│   ├── test_gui.py             # Presentation layer, filters, & views (6 tests)
+│   └── test_matching_service.py# Multi-factor matching & explainability (7 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
