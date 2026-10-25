@@ -10,6 +10,7 @@ from typing import Optional, Callable
 from models.item import Item, VALID_CATEGORIES
 from database.repository import ItemRepository
 from services.session_manager import SessionManager, session_manager as default_session_manager
+from services.image_service import ImageService, ImageValidationError
 
 
 class ReportItemFrame(ttk.Frame):
@@ -27,6 +28,9 @@ class ReportItemFrame(ttk.Frame):
         self.session = session if session is not None else default_session_manager
         self.on_success_callback = on_success_callback
         self.item_repo = ItemRepository(db_path)
+        self.image_service = ImageService()
+        self.selected_raw_image_path: Optional[str] = None
+        self._thumbnail_ref: Optional[tk.PhotoImage] = None
 
         self._build_ui()
 
@@ -135,17 +139,35 @@ class ReportItemFrame(ttk.Frame):
         self.desc_text.grid(row=row, column=1, sticky="ew", pady=8)
         row += 1
 
-        # Optional Image Path
-        ttk.Label(form_grid, text="Image (Optional)", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="w", pady=8, padx=(0, 16)
+        # Optional Image Upload & Preview Card
+        ttk.Label(form_grid, text="Item Photo (Optional)", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
+            row=row, column=0, sticky="nw", pady=8, padx=(0, 16)
         )
-        img_row = ttk.Frame(form_grid, style="Card.TFrame")
-        img_row.grid(row=row, column=1, sticky="ew", pady=8)
+        img_container = ttk.Frame(form_grid, style="Card.TFrame")
+        img_container.grid(row=row, column=1, sticky="ew", pady=8)
+
+        img_actions = ttk.Frame(img_container, style="Card.TFrame")
+        img_actions.pack(fill="x", anchor="w")
+
         self.image_var = tk.StringVar()
-        self.image_entry = ttk.Entry(img_row, textvariable=self.image_var, font=("Segoe UI", 9))
+        self.image_entry = ttk.Entry(img_actions, textvariable=self.image_var, font=("Segoe UI", 9), state="readonly")
         self.image_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        browse_btn = ttk.Button(img_row, text="Browse...", command=self._on_browse_image)
-        browse_btn.pack(side="right")
+
+        browse_btn = ttk.Button(img_actions, text="📷 Browse Photo...", command=self._on_browse_image)
+        browse_btn.pack(side="left", padx=(0, 6))
+
+        clear_img_btn = ttk.Button(img_actions, text="✕ Clear", command=self._on_clear_image)
+        clear_img_btn.pack(side="left")
+
+        # Live Thumbnail Preview
+        self.thumbnail_preview_lbl = ttk.Label(
+            img_container,
+            text="No photo selected (Optional: PNG, JPG, WEBP max 5MB)",
+            font=("Segoe UI", 9),
+            foreground="#64748b",
+            background="#ffffff"
+        )
+        self.thumbnail_preview_lbl.pack(anchor="w", pady=(8, 0))
         row += 1
 
         # Action Buttons
@@ -169,14 +191,52 @@ class ReportItemFrame(ttk.Frame):
         reset_btn.pack(side="left")
 
     def _on_browse_image(self) -> None:
-        """Open file dialog to pick an image."""
+        """Open file dialog to pick an image and render live preview."""
         chosen = filedialog.askopenfilename(
             parent=self,
             title="Select Item Photo",
-            filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp *.webp"), ("All files", "*.*")]
+            filetypes=[
+                ("Image files", "*.png *.jpg *.jpeg *.webp *.bmp *.gif"),
+                ("PNG Image", "*.png"),
+                ("JPEG Image", "*.jpg *.jpeg"),
+                ("All files", "*.*")
+            ]
         )
-        if chosen:
+        if not chosen:
+            return
+
+        try:
+            self.image_service.validate_image(chosen)
+            self.selected_raw_image_path = chosen
             self.image_var.set(chosen)
+
+            # Load thumbnail preview
+            thumb = self.image_service.load_thumbnail(chosen, size=(120, 120))
+            if thumb:
+                self._thumbnail_ref = thumb
+                self.thumbnail_preview_lbl.configure(
+                    image=self._thumbnail_ref,
+                    text="",
+                    compound="none"
+                )
+            else:
+                self.thumbnail_preview_lbl.configure(
+                    image="",
+                    text=f"✓ Selected: {chosen}"
+                )
+        except ImageValidationError as err:
+            messagebox.showerror("Invalid Image File", str(err), parent=self)
+            self._on_clear_image()
+
+    def _on_clear_image(self) -> None:
+        """Clear chosen image attachment."""
+        self.selected_raw_image_path = None
+        self._thumbnail_ref = None
+        self.image_var.set("")
+        self.thumbnail_preview_lbl.configure(
+            image="",
+            text="No photo selected (Optional: PNG, JPG, WEBP max 5MB)"
+        )
 
     def reset_form(self) -> None:
         """Clear form inputs back to defaults."""
@@ -186,10 +246,10 @@ class ReportItemFrame(ttk.Frame):
         self.location_var.set("")
         self.date_var.set(date.today().isoformat())
         self.desc_text.delete("1.0", tk.END)
-        self.image_var.set("")
+        self._on_clear_image()
 
     def _on_submit(self) -> None:
-        """Validate input and save item report."""
+        """Validate input, securely persist image, and save item report."""
         user = self.session.current_user
         if not user:
             messagebox.showerror("Error", "You must be logged in to report an item.", parent=self)
@@ -201,7 +261,15 @@ class ReportItemFrame(ttk.Frame):
         event_date = self.date_var.get().strip()
         category = self.category_var.get()
         item_type = self.type_var.get()
-        image_path = self.image_var.get().strip() or None
+
+        # Securely copy image into upload directory if selected
+        final_image_path: Optional[str] = None
+        if self.selected_raw_image_path:
+            try:
+                final_image_path = self.image_service.save_image(self.selected_raw_image_path)
+            except Exception as e:
+                messagebox.showerror("Image Upload Error", f"Failed to save image attachment: {e}", parent=self)
+                return
 
         item = Item(
             id=None,
@@ -212,7 +280,7 @@ class ReportItemFrame(ttk.Frame):
             description=desc,
             event_date=event_date,
             location=location,
-            image_path=image_path,
+            image_path=final_image_path,
             status="OPEN"
         )
 
@@ -227,6 +295,11 @@ class ReportItemFrame(ttk.Frame):
             if self.on_success_callback:
                 self.on_success_callback(item_id)
         except ValueError as err:
+            # Clean up copied file if validation failed
+            if final_image_path:
+                self.image_service.delete_image(final_image_path)
             messagebox.showerror("Validation Error", str(err), parent=self)
         except Exception as ex:
+            if final_image_path:
+                self.image_service.delete_image(final_image_path)
             messagebox.showerror("Error", f"Failed to submit item report: {ex}", parent=self)

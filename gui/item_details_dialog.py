@@ -8,6 +8,49 @@ from tkinter import ttk, messagebox
 from typing import Optional, Callable
 from models.item import Item
 from database.repository import ItemRepository, UserRepository
+from services.image_service import ImageService
+
+
+class ImageViewerDialog(tk.Toplevel):
+    """Enlarged modal viewer for full-resolution item photographs."""
+
+    def __init__(self, parent: tk.Widget, image_path: str, item_title: str) -> None:
+        super().__init__(parent)
+        self.title(f"📷 Photo: {item_title}")
+        self.geometry("640x580")
+        self.minsize(500, 450)
+        self.configure(bg="#0f172a")
+        self.transient(parent)
+
+        self.image_service = ImageService()
+        self._photo_ref = None
+
+        container = ttk.Frame(self, padding="16")
+        container.pack(fill="both", expand=True)
+
+        ttk.Label(
+            container,
+            text=f"📷 {item_title}",
+            font=("Segoe UI", 12, "bold"),
+            foreground="#f8fafc"
+        ).pack(anchor="w", pady=(0, 10))
+
+        # Full photo canvas/label
+        photo = self.image_service.load_thumbnail(image_path, size=(580, 460))
+        if photo:
+            self._photo_ref = photo
+            img_lbl = ttk.Label(container, image=self._photo_ref, background="#0f172a")
+            img_lbl.pack(fill="both", expand=True)
+        else:
+            ttk.Label(
+                container,
+                text="Unable to load image file.",
+                font=("Segoe UI", 10),
+                foreground="#ef4444"
+            ).pack(pady=40)
+
+        close_btn = ttk.Button(container, text="Close Viewer", style="Secondary.TButton", command=self.destroy)
+        close_btn.pack(pady=(12, 0))
 
 
 class ItemDetailsDialog(tk.Toplevel):
@@ -31,6 +74,8 @@ class ItemDetailsDialog(tk.Toplevel):
         self.on_delete_callback = on_delete_callback
         self.db_path = db_path
         self.user_repo = UserRepository(db_path)
+        self.image_service = ImageService()
+        self._thumb_ref = None
 
         self.title(f"Item Details — #{item.id} {item.title}")
         self.geometry("620x580")
@@ -93,7 +138,7 @@ class ItemDetailsDialog(tk.Toplevel):
         ]
 
         if self.item.image_path:
-            details.append(("Attached Image:", self.item.image_path))
+            details.append(("Attached Photo:", "Attached (Click preview)"))
 
         for row_idx, (label, val) in enumerate(details):
             lbl = ttk.Label(meta_card, text=label, font=("Segoe UI", 10, "bold"), width=16)
@@ -101,6 +146,23 @@ class ItemDetailsDialog(tk.Toplevel):
 
             val_lbl = ttk.Label(meta_card, text=val, font=("Segoe UI", 10))
             val_lbl.grid(row=row_idx, column=1, sticky="w", pady=4)
+
+        if self.item.image_path:
+            photo_side = ttk.Frame(meta_card, style="Card.TFrame")
+            photo_side.grid(row=0, column=2, rowspan=len(details) + 1, padx=(20, 0), sticky="n")
+
+            thumb = self.image_service.load_thumbnail(self.item.image_path, size=(110, 110))
+            if thumb:
+                self._thumb_ref = thumb
+                img_lbl = ttk.Label(photo_side, image=self._thumb_ref, background="#ffffff")
+                img_lbl.pack(pady=(0, 6))
+
+            zoom_btn = ttk.Button(
+                photo_side,
+                text="🔍 Full Photo",
+                command=lambda: ImageViewerDialog(self, self.item.image_path, self.item.title)
+            )
+            zoom_btn.pack()
 
         # Full Description Card
         desc_card = ttk.Frame(container, style="Card.TFrame", padding="16")

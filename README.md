@@ -312,6 +312,30 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
+### Phase 12: Image & Photo Attachment System
+- **Objectives**: Enable students and administrators to attach authentic photographs to lost and found reports, render live thumbnail previews in report forms and item inspection dialogs, display visual indicators in directory tables, and provide an enlarged photo zoom modal.
+- **Components Built**:
+  - `services/image_service.py`:
+    - `validate_image()`: Verifies image file existence, validates permitted extensions (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`), enforces a 5MB maximum file size limit, and verifies PIL image header integrity to block spoofed or corrupted files.
+    - `save_image()`: Securely copies uploaded photographs into `assets/uploads/` using unguessable 12-character hex UUID filenames (`item_<hash>.<ext>`) to avoid file collisions or path traversal.
+    - `load_thumbnail()`: Dynamically scales high-resolution photos using LANCZOS antialiasing to Tkinter `ImageTk.PhotoImage` instances with aspect-ratio preservation.
+    - `delete_image()`: Safely purges uploaded images while strictly defending against directory traversal attacks.
+  - `gui/report_item_frame.py`: Enhanced report submission form with "📷 Browse Photo...", "✕ Clear", and an interactive live thumbnail card preview.
+  - `gui/item_details_dialog.py`:
+    - Embedded photo thumbnail card on item inspection views.
+    - `ImageViewerDialog`: Dedicated dark-mode modal for full-resolution photograph examination.
+  - `gui/search_frame.py` & `gui/my_items_frame.py`: Prepend visual `📷` indicator on directory rows that have authentic photo attachments.
+- **Files Created / Updated**:
+  - `services/image_service.py`: `ImageService`, `ImageValidationError`.
+  - `gui/item_details_dialog.py`: Added `ImageViewerDialog` and thumbnail preview.
+  - `gui/report_item_frame.py`: Integrated image upload & preview.
+  - `gui/search_frame.py` & `gui/my_items_frame.py`: Table photo badges.
+  - `requirements.txt`: Added `pillow>=10.0.0`.
+  - `tests/test_image_service.py`: 9 automated tests validating formats, oversized rejection, corruption detection, unique storage, and modal initialization.
+- **Acceptance Criteria**: Authentic photo uploads secured; live previews rendered without GUI stutter; 86/86 tests pass.
+
+---
+
 ## 🏛️ System Architecture
 
 CampusConnect follows a strict **4-Tier Layered Architecture**:
@@ -512,7 +536,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 77 tests in 16.349s
+Ran 86 tests in 14.172s
 OK
 ```
 
@@ -526,7 +550,7 @@ Campus-Connect/
 ├── main.py                     # Primary execution entry point & view controller
 ├── seed_demo_data.py           # Demonstration database seeder for viva presentation
 ├── run.bat                     # Windows one-click startup launcher
-├── requirements.txt            # Python dependencies (Matplotlib, Pandas)
+├── requirements.txt            # Python dependencies (Matplotlib, Pandas, Pillow)
 ├── .gitignore                  # Git ignore rules
 ├── README.md                   # Comprehensive phase-wise project manual & viva guide
 │
@@ -549,17 +573,18 @@ Campus-Connect/
 │   ├── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
 │   ├── matching_service.py     # Explainable multi-factor Lost/Found matcher
 │   ├── claim_service.py        # Claim submission, ACID review & handover records
-│   └── notification_service.py # In-app notification center & smart match auto-alerts
+│   ├── notification_service.py # In-app notification center & smart match auto-alerts
+│   └── image_service.py        # Secure photo uploads, size limits, & thumbnail scaling
 │
 ├── gui/                        # Presentation UI tier
 │   ├── __init__.py
 │   ├── styles.py               # Color palette, Segoe UI typography, TTK themes
 │   ├── auth_window.py          # Sign In & Account Registration tabs
 │   ├── main_window.py          # Application shell, navbar, alerts bell & tabbed notebook
-│   ├── search_frame.py         # Real-time search, multi-filters & pagination
-│   ├── report_item_frame.py    # Lost & Found submission form with validation
-│   ├── my_items_frame.py       # Personal reports tracker with safe delete
-│   ├── item_details_dialog.py  # Modal item inspection & action triggers
+│   ├── search_frame.py         # Real-time search, multi-filters & pagination (with photo indicator)
+│   ├── report_item_frame.py    # Lost & Found submission form with live photo preview
+│   ├── my_items_frame.py       # Personal reports tracker with safe delete & photo tags
+│   ├── item_details_dialog.py  # Modal item inspection, photo preview & ImageViewerDialog
 │   ├── match_dialog.py         # Algorithmic match viewer with explanation breakdown
 │   ├── claim_dialog.py         # Ownership proof submission modal
 │   ├── claims_manager_frame.py # Claims queue and status tracker
@@ -583,11 +608,14 @@ Campus-Connect/
 │   ├── test_claim_service.py   # Claim workflows & ACID handover transactions (5 tests)
 │   ├── test_analytics.py       # DataFrame KPIs & Matplotlib chart generation (6 tests)
 │   ├── test_integration.py     # E2E lifecycle & security resilience tests (3 tests)
-│   └── test_notifications.py   # Notification center & match auto-alerts (11 tests)
+│   ├── test_notifications.py   # Notification center & match auto-alerts (11 tests)
+│   └── test_image_service.py   # Photo validation, upload storage & zoom modal (9 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
 │
-└── assets/                     # Application visual assets
-    └── .gitkeep
+└── assets/                     # Application visual assets & local uploads
+    ├── .gitkeep
+    └── uploads/                # User photo uploads (secured with unique UUID names)
 ```
+

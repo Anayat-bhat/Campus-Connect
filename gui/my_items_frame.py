@@ -114,6 +114,7 @@ class MyItemsFrame(ttk.Frame):
 
         for item in items:
             tag = item.status if item.status == "RETURNED" else item.type
+            title_display = f"📷 {item.title}" if item.image_path else item.title
             self.tree.insert(
                 "",
                 "end",
@@ -121,7 +122,7 @@ class MyItemsFrame(ttk.Frame):
                 values=(
                     f"#{item.id}",
                     item.type,
-                    item.title,
+                    title_display,
                     item.category,
                     item.location,
                     item.event_date,

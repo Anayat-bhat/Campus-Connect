@@ -26,6 +26,10 @@ from services.claim_service import (
 from services.notification_service import (
     NotificationService,
 )
+from services.image_service import (
+    ImageService,
+    ImageValidationError,
+)
 
 __all__ = [
     "SessionManager",
@@ -42,4 +46,6 @@ __all__ = [
     "ClaimService",
     "ClaimWorkflowError",
     "NotificationService",
+    "ImageService",
+    "ImageValidationError",
 ]

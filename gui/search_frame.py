@@ -239,6 +239,7 @@ class SearchFrame(ttk.Frame):
         # Insert items
         for item in self.cached_items:
             tag = item.status if item.status == "RETURNED" else item.type
+            title_display = f"📷 {item.title}" if item.image_path else item.title
             self.tree.insert(
                 "",
                 "end",
@@ -246,7 +247,7 @@ class SearchFrame(ttk.Frame):
                 values=(
                     f"#{item.id}",
                     item.type,
-                    item.title,
+                    title_display,
                     item.category,
                     item.location,
                     item.event_date,
