@@ -124,8 +124,26 @@ def seed_demo_data(db_path: str = DEFAULT_DB_PATH) -> None:
         proof_description="Engraved with initials 'A.S.' and right ear tip is size Small."
     )
 
+    print("[INFO] Triggering smart match alert scans...")
+    from services.notification_service import NotificationService
+    notif_service = NotificationService(db_path=db_path)
+    
+    # Run scan for found items to notify lost item owners
+    for item in created_items:
+        if item.type == "FOUND" and item.status == "OPEN":
+            notif_service.scan_and_alert_matches(item, min_threshold=55.0)
+
+    # Seed a campus welcome notification for each student
+    for st in student_objs:
+        notif_service.notify(
+            user_id=st.id,
+            title="👋 Welcome to CampusConnect",
+            message=f"Welcome {st.full_name}! Check here for real-time algorithmic match alerts and claim updates.",
+            notif_type="SYSTEM"
+        )
+
     print("[SUCCESS] Demo dataset successfully populated!")
-    print(f"[SUMMARY] {len(created_items)} items, 5 student accounts, 1 pending claim queue, and 2 verified returns.")
+    print(f"[SUMMARY] {len(created_items)} items, 5 student accounts, 1 pending claim queue, 2 verified returns, and active match alerts.")
 
 
 if __name__ == "__main__":
