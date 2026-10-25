@@ -221,6 +221,10 @@ class ItemRepository:
         finally:
             conn.close()
 
+    def list_by_user(self, user_id: int) -> List[Item]:
+        """Fetch all items reported by a specific user."""
+        return self.list_items(user_id=user_id, limit=500)
+
     def count_items(
         self,
         item_type: Optional[str] = None,

@@ -163,8 +163,27 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
-### Upcoming Phases (Phase 5 – Phase 10)
-- **Phase 5**: Lost & Found Reporting and Search GUI Windows
+### Phase 5: Lost & Found Reporting and Search GUI Windows
+- **Objectives**: Build responsive, accessible Tkinter desktop graphical user interfaces for reporting items, searching with real-time multi-criteria filters, and personal item management.
+- **Components Built**:
+  - `gui/styles.py`: Design system defining typography (Segoe UI), modern curated slate/blue palette, responsive button variants (Primary, Secondary, Success, Danger), and styled table treeviews with zebra striping and status tags.
+  - `gui/auth_window.py`: Authentication screen with switchable Sign In and Register tabs, password visibility toggle, client-side input validation, and default admin reminder.
+  - `gui/report_item_frame.py`: Report lost or found items with type radios, category dropdown, location, date picker, multi-line description, and optional image file browser dialog.
+  - `gui/search_frame.py`: Multi-filter search interface (keyword search across title/description, category, item type, status, location), styled `ttk.Treeview` with color badges, double-click inspection, and page-by-page pagination.
+  - `gui/item_details_dialog.py`: Modal popup for inspecting item metadata, reporter details, and context-sensitive action triggers (claim item, delete item).
+  - `gui/my_items_frame.py`: Student personal activity dashboard displaying all items reported by the logged-in user with live count badges and deletion controls.
+  - `gui/main_window.py`: Application dashboard shell featuring top navigation bar, authenticated user profile chip, role badge, session logout, and auto-refreshing tab notebook.
+  - `main.py`: Bootstraps SQLite database on startup, seeds default administrator, and orchestrates dynamic transitions between `AuthWindow` and `MainWindow`.
+- **Files Created / Updated**:
+  - `gui/styles.py`, `gui/auth_window.py`, `gui/report_item_frame.py`, `gui/search_frame.py`, `gui/item_details_dialog.py`, `gui/my_items_frame.py`, `gui/main_window.py`, `gui/__init__.py`.
+  - `database/repository.py`: Added `list_by_user()` to `ItemRepository`.
+  - `main.py`: Complete production application runner with stateful view controller.
+  - `tests/test_gui.py`: 6 automated unit tests validating theme configuration, auth notebook, report inputs, search filters, my items view, and full app controller transitions.
+- **Acceptance Criteria**: Desktop UI launches smoothly, filters and pagination function in real-time, form validations provide clear visual alerts; 45/45 tests pass.
+
+---
+
+### Upcoming Phases (Phase 6 – Phase 10)
 - **Phase 6**: Explainable Multi-Factor Text-Matching Algorithm
 - **Phase 7**: Claims & Return Handover Workflow with ACID Transactions
 - **Phase 8**: Dynamic Analytics Dashboard with Matplotlib Visualizations
@@ -215,7 +234,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 39 tests in 8.049s
+Ran 45 tests in 6.696s
 OK
 ```
 
@@ -226,7 +245,7 @@ OK
 ```text
 Campus-Connect/
 │
-├── main.py                     # Primary execution entry point
+├── main.py                     # Primary execution entry point & view controller
 ├── requirements.txt            # Python dependencies (Matplotlib, Pandas)
 ├── .gitignore                  # Git ignore rules
 ├── README.md                   # Comprehensive phase-wise project manual
@@ -248,8 +267,15 @@ Campus-Connect/
 │   ├── auth_service.py         # Registration, login, password management
 │   └── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
 │
-├── gui/                        # Presentation UI tier (Phases 5, 7, 8)
-│   └── __init__.py
+├── gui/                        # Presentation UI tier
+│   ├── __init__.py
+│   ├── styles.py               # Color palette, Segoe UI typography, TTK themes
+│   ├── auth_window.py          # Sign In & Account Registration tabs
+│   ├── main_window.py          # Application shell, navbar & tabbed notebook
+│   ├── search_frame.py         # Real-time search, multi-filters & pagination
+│   ├── report_item_frame.py    # Lost & Found submission form with validation
+│   ├── my_items_frame.py       # Personal reports tracker with safe delete
+│   └── item_details_dialog.py  # Modal item inspection & action triggers
 │
 ├── analytics/                  # Matplotlib & Pandas reporting (Phase 8)
 │   └── __init__.py
@@ -260,7 +286,8 @@ Campus-Connect/
 │   ├── test_database.py        # Schema, constraints, & indexes tests (10 tests)
 │   ├── test_models.py          # Domain model invariant tests (6 tests)
 │   ├── test_repository.py      # CRUD, filtering, & safe delete tests (6 tests)
-│   └── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
+│   ├── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
+│   └── test_gui.py             # Presentation layer, filters, & views (6 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
