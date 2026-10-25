@@ -116,7 +116,7 @@ class NotificationCenterDialog(tk.Toplevel):
         self.message_box = tk.Text(
             detail_card,
             wrap="word",
-            font=("Segoe UI", 9.5),
+            font=("Segoe UI", 10),
             height=4,
             relief="solid",
             borderwidth=1,

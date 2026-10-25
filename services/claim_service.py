@@ -27,14 +27,17 @@ class ClaimService:
         claim_repo: Optional[ClaimRepository] = None,
         user_repo: Optional[UserRepository] = None,
         notif_service: Optional[Any] = None,
+        notification_service: Optional[Any] = None,
         db_path: Optional[str] = None
     ) -> None:
         self.db_path = db_path
         self.item_repo = item_repo if item_repo is not None else ItemRepository(db_path)
         self.claim_repo = claim_repo if claim_repo is not None else ClaimRepository(db_path)
         self.user_repo = user_repo if user_repo is not None else UserRepository(db_path)
-        if notif_service is not None:
-            self.notif_service = notif_service
+        
+        active_notif = notif_service if notif_service is not None else notification_service
+        if active_notif is not None:
+            self.notif_service = active_notif
         else:
             from services.notification_service import NotificationService
             self.notif_service = NotificationService(db_path=db_path)

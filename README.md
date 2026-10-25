@@ -289,6 +289,29 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
+### Phase 11: In-App Notification Center & Smart Match Alert System
+- **Objectives**: Build a reactive in-app notification center that proactively dispatches real-time alerts to students when counterpart matches are detected by the matching algorithm, when ownership claims are submitted on found items, and when administrative claim reviews are approved or rejected.
+- **Components Built**:
+  - `database/schema.sql`: Added `notifications` table (`id`, `user_id`, `title`, `message`, `type`, `related_item_id`, `is_read`, `created_at`) with performance index `idx_notifications_user_unread` for instant count queries.
+  - `models/notification.py`: Domain entity `Notification` with invariants validating titles, lengths, valid types (`MATCH_FOUND`, `CLAIM_SUBMITTED`, `CLAIM_APPROVED`, `CLAIM_REJECTED`, `SYSTEM`), and user associations.
+  - `database/repository.py`: `NotificationRepository` implementing CRUD operations, `count_unread()`, `mark_as_read()`, `mark_all_as_read()`, and safe cascade deletion.
+  - `services/notification_service.py`: High-level notification manager coordinating:
+    - `notify()`: Persists formatted user notification.
+    - `scan_and_alert_matches()`: Analyzes newly reported items against existing opposite-type items and dispatches targeted alerts to owners with algorithmic rationale.
+    - `alert_claim_submitted()`: Notifies the finder when another student submits an ownership claim.
+    - `alert_claim_decision()`: Alerts the claimant with approval pickup instructions or rejection reasons.
+  - `gui/notification_dialog.py`: Interactive `NotificationCenterDialog` modal featuring unread count filters, detailed message viewer, and direct "🔍 View Item" inspection shortcut.
+  - `gui/main_window.py`: Added top navbar `🔔 Alerts (N)` button with dynamic unread badge count updating in real time.
+- **Files Created / Updated**:
+  - `models/notification.py`: `Notification` entity.
+  - `database/repository.py`: `NotificationRepository`.
+  - `services/notification_service.py`: `NotificationService`.
+  - `gui/notification_dialog.py`: `NotificationCenterDialog`.
+  - `tests/test_notifications.py`: 11 automated unit tests validating entity rules, unread queries, alert dispatches, and dialog mounting.
+- **Acceptance Criteria**: Smart match alerts auto-trigger on report submissions; unread badges update dynamically; 77/77 tests pass.
+
+---
+
 ## 🏛️ System Architecture
 
 CampusConnect follows a strict **4-Tier Layered Architecture**:
@@ -489,7 +512,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 66 tests in 10.858s
+Ran 77 tests in 16.349s
 OK
 ```
 
@@ -509,28 +532,30 @@ Campus-Connect/
 │
 ├── database/                   # Database persistence tier
 │   ├── __init__.py
-│   ├── schema.sql              # Relational DDL schema & indexes
+│   ├── schema.sql              # Relational DDL schema & indexes (users, items, claims, notifications)
 │   ├── connection.py           # Connection factory, transactions, admin seeder
-│   └── repository.py           # UserRepository, ItemRepository, ClaimRepository
+│   └── repository.py           # UserRepository, ItemRepository, ClaimRepository, NotificationRepository
 │
 ├── models/                     # Domain entity dataclasses & validation
 │   ├── __init__.py
 │   ├── user.py                 # User model & validation rules
 │   ├── item.py                 # Item model, categories, & status checks
-│   └── claim.py                # Claim model & ownership proof validation
+│   ├── claim.py                # Claim model & ownership proof validation
+│   └── notification.py         # Notification model & alert type validation
 │
 ├── services/                   # Business logic tier
 │   ├── __init__.py
 │   ├── auth_service.py         # Registration, login, password management
 │   ├── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
 │   ├── matching_service.py     # Explainable multi-factor Lost/Found matcher
-│   └── claim_service.py        # Claim submission, ACID review & handover records
+│   ├── claim_service.py        # Claim submission, ACID review & handover records
+│   └── notification_service.py # In-app notification center & smart match auto-alerts
 │
 ├── gui/                        # Presentation UI tier
 │   ├── __init__.py
 │   ├── styles.py               # Color palette, Segoe UI typography, TTK themes
 │   ├── auth_window.py          # Sign In & Account Registration tabs
-│   ├── main_window.py          # Application shell, navbar & tabbed notebook
+│   ├── main_window.py          # Application shell, navbar, alerts bell & tabbed notebook
 │   ├── search_frame.py         # Real-time search, multi-filters & pagination
 │   ├── report_item_frame.py    # Lost & Found submission form with validation
 │   ├── my_items_frame.py       # Personal reports tracker with safe delete
@@ -538,6 +563,7 @@ Campus-Connect/
 │   ├── match_dialog.py         # Algorithmic match viewer with explanation breakdown
 │   ├── claim_dialog.py         # Ownership proof submission modal
 │   ├── claims_manager_frame.py # Claims queue and status tracker
+│   ├── notification_dialog.py  # In-app notification center modal with filter & inspect
 │   └── analytics_frame.py      # Embedded Matplotlib KPI dashboard & chart exporter
 │
 ├── analytics/                  # Matplotlib & Pandas reporting
@@ -556,7 +582,8 @@ Campus-Connect/
 │   ├── test_matching_service.py# Multi-factor matching & explainability (7 tests)
 │   ├── test_claim_service.py   # Claim workflows & ACID handover transactions (5 tests)
 │   ├── test_analytics.py       # DataFrame KPIs & Matplotlib chart generation (6 tests)
-│   └── test_integration.py     # E2E lifecycle & security resilience tests (3 tests)
+│   ├── test_integration.py     # E2E lifecycle & security resilience tests (3 tests)
+│   └── test_notifications.py   # Notification center & match auto-alerts (11 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
