@@ -1,56 +1,179 @@
-# CampusConnect: Smart Campus Lost & Found Management System
+# 🎓 CampusConnect: Smart Campus Lost & Found Management System
 
-A centralized, reliable desktop application tailored for college campuses to report, track, match, and return lost personal belongings.
-
----
-
-## 📌 Problem Statement
-Students frequently lose personal belongings on campus (college ID cards, notebooks, calculators, earphones, keys, etc.). Most campuses rely on scattered WhatsApp messages or informal notices, leading to lost records, duplicate reports, and delayed returns. **CampusConnect** provides a structured, automated, and auditable system with intelligent text-matching algorithms to connect owners with found items.
+> **A practical, secure, and modular Python desktop application designed for college campuses to report, track, intelligently match, and verify the return of lost student belongings.**
 
 ---
 
-## 🚀 Key Features Roadmap
-- [x] **Phase 1: Project Setup & System Foundation**
-- [ ] **Phase 2: SQLite Database Design & Schemas**
-- [ ] **Phase 3: Data Models & CRUD Operations**
-- [ ] **Phase 4: Authentication & Role-Based Access Control (Student vs Admin)**
-- [ ] **Phase 5: Lost & Found Item Reporting Interfaces**
-- [ ] **Phase 6: Multi-Factor Weighted Matching Algorithm**
-- [ ] **Phase 7: Claim Verification & Return Tracking with DB Transactions**
-- [ ] **Phase 8: Analytics Dashboard & Matplotlib Visualizations**
-- [ ] **Phase 9: Comprehensive Unit Testing & Input Hardening**
-- [ ] **Phase 10: Final Documentation, Presentation & Viva Preparation**
+## 📑 Table of Contents
+1. [Project Overview](#-project-overview)
+2. [Architectural Design](#-architectural-design)
+3. [Technology Stack](#-technology-stack)
+4. [Phase-by-Phase Development Guide](#-phase-by-phase-development-guide)
+   - [Phase 1: Project Setup & Environment Verification](#phase-1-project-setup--environment-verification)
+   - [Phase 2: Relational Database Design & SQLite Schema](#phase-2-relational-database-design--sqlite-schema)
+   - [Phase 3: Domain Models & Repository CRUD Layer](#phase-3-domain-models--repository-crud-layer)
+   - [Upcoming Phases (Phase 4 – Phase 10)](#upcoming-phases-phase-4--phase-10)
+5. [Installation & Quick Start](#-installation--quick-start)
+6. [Automated Testing Suite](#-automated-testing-suite)
+7. [Directory Structure](#-directory-structure)
 
 ---
 
-## 🛠️ Technology Stack
-- **Language**: Python 3.10+
-- **GUI Toolkit**: Tkinter & ttk (Python standard library)
-- **Database**: SQLite 3 (ACID-compliant relational database)
-- **Data Analytics & Charts**: Matplotlib, Pandas
-- **Version Control**: Git & GitHub
+## 📌 Project Overview
+
+### The Problem
+Students frequently misplace crucial personal items on college campuses (e.g., student ID cards, laboratory journals, calculators, keys, earphones, bags). Current campus processes rely on unstructured WhatsApp groups, verbal notices, or lost-property desks, leading to:
+- No central audit trail.
+- Unverified ownership claims.
+- Duplicate reporting and lack of privacy for sensitive contact details.
+
+### The CampusConnect Solution
+CampusConnect provides an automated desktop application featuring:
+- **Role-Based Access**: Students report and track items; Admins review claims and audit handovers.
+- **Intelligent Text Matching**: Multi-factor similarity scoring (category, title, description, location, date).
+- **Ownership Verification**: Private distinguishing proofs to prevent fraudulent claims.
+- **Atomic Database Transactions**: Ensures an item cannot be claimed or returned more than once.
+- **Visual Analytics**: Interactive Matplotlib charts for campus administrative reporting.
 
 ---
 
-## 📂 Architecture Overview
-```text
-CampusConnect/
-├── main.py                  # Application entry point
-├── database/                # SQLite connection, schema, and repository queries
-├── models/                  # Domain entity dataclasses (User, Item, Claim)
-├── services/                # Business logic (Auth, Matching, Claims, Returns)
-├── gui/                     # Modular Tkinter view windows & components
-├── analytics/               # Matplotlib statistics & Pandas aggregation
-├── tests/                   # Automated unittest suite
-├── data/                    # Local storage (gitignored database & uploads)
-├── assets/                  # Icons and images
-├── requirements.txt         # Project dependencies
-└── .gitignore               # Ignored cache, databases, and venv
+## 🏛️ Architectural Design
+
+CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation of Concerns**:
+
+```
+ ┌────────────────────────────────────────────────────────────────────────┐
+ │                      1. Presentation Tier (GUI)                        │
+ │           Tkinter / ttk Frames, Windows, Views, and Dialogs            │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │ calls
+ ┌───────────────────────────────────▼────────────────────────────────────┐
+ │                     2. Business Logic Tier                             │
+ │    Authentication, Matching Engine, Claim Verification, Return Rules   │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │ operates on
+ ┌───────────────────────────────────▼────────────────────────────────────┐
+ │                      3. Data Domain Models Tier                        │
+ │           Dataclasses with Invariant Validation (User, Item, Claim)    │
+ └───────────────────────────────────┬────────────────────────────────────┘
+                                     │ queries & persists via
+ ┌───────────────────────────────────▼────────────────────────────────────┐
+ │                     4. Persistence & Database Tier                     │
+ │      SQLite 3 Database, Repository Pattern, Schema DDL, Transactions   │
+ └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 💻 Getting Started (Phase 1)
+## 🛠️ Technology Stack
+
+| Layer | Technology | Justification |
+| :--- | :--- | :--- |
+| **Language** | Python 3.10+ | Clean standard library, object-oriented, typing support. |
+| **GUI Framework** | Tkinter & `ttk` | Built-in, cross-platform, native desktop GUI. |
+| **Database** | SQLite 3 | Relational, ACID-compliant, zero external configuration. |
+| **Security** | PBKDF2-HMAC-SHA256 | Standard library `hashlib` with 100,000 rounds and random salt. |
+| **Data Analytics** | Matplotlib & Pandas | Campus lost/found trend charts and status analytics. |
+| **Testing** | Python `unittest` | Built-in automated unit test runner. |
+| **Version Control**| Git & GitHub | Professional versioning with descriptive conventional commits. |
+
+---
+
+## 📘 Phase-by-Phase Development Guide
+
+### Phase 1: Project Setup & Environment Verification
+- **Objectives**: Set up clean repository structure, configure `.gitignore` (ignoring `.db`, `venv/`, and `__pycache__`), build application entry point, and verify Tkinter.
+- **Files Created**:
+  - `main.py`: Entry point and diagnostic Tkinter verification window.
+  - `requirements.txt`: Minimal external dependencies (`matplotlib`, `pandas`).
+  - `.gitignore`: Prevents checking in runtime files or sensitive databases.
+  - `tests/test_phase1.py`: Automated tests checking Python runtime (>=3.10), Tkinter availability, and directories.
+- **Acceptance Criteria**: `main.py` launches a GUI window, and 4/4 Phase 1 tests pass.
+
+---
+
+### Phase 2: Relational Database Design & SQLite Schema
+- **Objectives**: Design normalized relational schema, enforce foreign key referential integrity, implement safe transactions, and create administrative user seeding.
+- **Database Schema**:
+  1. `users`: Stores accounts (`id`, `username`, `password_hash`, `salt`, `full_name`, `email`, `role`, `created_at`).
+  2. `items`: Stores lost and found reports (`id`, `type`, `user_id`, `title`, `category`, `description`, `event_date`, `location`, `image_path`, `status`).
+  3. `claims`: Tracks student ownership claims with private verification details (`id`, `item_id`, `claimant_id`, `proof_description`, `status`, `submitted_at`, `reviewed_at`, `reviewed_by`).
+  4. `item_returns`: Records return handovers. Enforces `UNIQUE (item_id)` to prevent duplicate item returns.
+- **Key Engineering Decisions**:
+  - `PRAGMA foreign_keys = ON;`: Executed on every connection because SQLite disables FK checking by default.
+  - **B-Tree Indexes**: `idx_items_type_status`, `idx_items_category`, `idx_items_location`, `idx_claims_item_id`.
+  - **Password Hashing**: Cryptographic PBKDF2-HMAC-SHA256 with 16-byte random salt.
+- **Files Created**:
+  - `database/schema.sql`: Full DDL script with CHECK constraints and foreign keys.
+  - `database/connection.py`: Thread-safe connection provider, transaction context manager (`get_db_cursor`), and admin seeder.
+  - `tests/test_database.py`: 10 unit tests for schema creation, constraints, and cascades.
+- **Acceptance Criteria**: Schema creates cleanly; constraints and cascades verified; 14/14 tests pass.
+
+---
+
+### Phase 3: Domain Models & Repository CRUD Layer
+- **Objectives**: Implement object-oriented domain models with invariant validation, and a complete Repository pattern for CRUD operations.
+- **Domain Models (`models/`)**:
+  - `User`: Validates username rules (alphanumeric, min 3 chars), email regex, and permitted roles (`student`, `admin`).
+  - `Item`: Validates categories (`Electronics`, `Books and stationery`, `Identity cards`, `Accessories`, `Personal belongings`, `Other`), date format (`YYYY-MM-DD`), non-empty descriptions, and deletion rules.
+  - `Claim`: Validates distinguishing proof descriptions (min 5 chars) and state transitions.
+- **Data Access Repositories (`database/repository.py`)**:
+  - `UserRepository`: `create()`, `get_by_id()`, `get_by_username()`, `get_by_email()`, `list_all()`, `update_profile()`, `delete()`.
+  - `ItemRepository`:
+    - `create()`: Validates and inserts reports.
+    - `list_items()`: Dynamic parameterized SQL search with multi-filter support (type, category, location, keyword, date range) and pagination (`LIMIT` / `OFFSET`).
+    - `count_items()`: Fast count queries for pagination controls.
+    - `update()`: Modifies item fields.
+    - `delete()`: **Safe deletion**; enforces permission checks (owner or admin) and prevents deleting `RETURNED` records to preserve audit trails.
+  - `ClaimRepository`:
+    - `create()`: Atomic submission; automatically transitions item status to `CLAIM_PENDING`.
+    - `list_by_item()`, `list_by_claimant()`, `list_all()`.
+    - `update_status()`: Records approval/rejection with reviewer ID and timestamp.
+- **Files Created**:
+  - `models/user.py`, `models/item.py`, `models/claim.py`
+  - `database/repository.py`
+  - `tests/test_models.py` (Validation tests)
+  - `tests/test_repository.py` (CRUD & safe deletion tests)
+- **Acceptance Criteria**: All CRUD operations, parameterized filtering, safe deletion, and status transitions pass; 26/26 tests pass.
+
+---
+
+### Phase 4: Authentication Services, Session Manager & Role Protection
+- **Objectives**: Implement robust user authentication services, PBKDF2 password verification, thread-safe session tracking, and role-based access control (RBAC) decorators.
+- **Components Built**:
+  - `SessionManager`: In-memory state tracking active authenticated user (`current_user`), login timestamps, and role checks (`is_admin`, `has_role`).
+  - `AuthService`:
+    - `register_user()`: Validates password strength (min 6 characters, no whitespace padding), checks username/email uniqueness, hashes credentials with PBKDF2-HMAC-SHA256 and unique 16-byte salt.
+    - `authenticate()`: Authenticates users by username or email.
+    - `login()`: Authenticates credentials and binds user to active session.
+    - `logout()`: Clears active session.
+    - `change_password()`: Verifies current password before allowing password updates.
+    - `admin_reset_password()`: Administrative override for account recovery.
+  - **RBAC Decorators**:
+    - `@require_auth`: Enforces that caller must be authenticated; raises `AuthenticationError`.
+    - `@require_role(*roles)`: Enforces that active user has one of the allowed roles; raises `AuthorizationError`.
+    - `@require_admin`: Enforces administrative privilege.
+- **Files Created / Updated**:
+  - `services/session_manager.py`: SessionManager, AuthenticationError, AuthorizationError, and RBAC decorators.
+  - `services/auth_service.py`: AuthService, RegistrationError.
+  - `services/__init__.py`: Clean service package exports.
+  - `database/repository.py`: Added `update_password` to `UserRepository`.
+  - `tests/test_auth_service.py`: 13 automated unit tests for registration, authentication, session state, password changes, and RBAC guards.
+- **Acceptance Criteria**: Passwords hashed securely, session tracked accurately, RBAC guards protect unauthorized access; 39/39 tests pass.
+
+---
+
+### Upcoming Phases (Phase 5 – Phase 10)
+- **Phase 5**: Lost & Found Reporting and Search GUI Windows
+- **Phase 6**: Explainable Multi-Factor Text-Matching Algorithm
+- **Phase 7**: Claims & Return Handover Workflow with ACID Transactions
+- **Phase 8**: Dynamic Analytics Dashboard with Matplotlib Visualizations
+- **Phase 9**: End-to-End System Integration & Edge-Case Hardening
+- **Phase 10**: Project Packaging, User Guide, and Viva Presentation Defense
+
+---
+
+## 🚀 Installation & Quick Start
 
 ### 1. Clone the repository
 ```powershell
@@ -58,7 +181,7 @@ git clone https://github.com/Anayat-bhat/Campus-Connect.git
 cd Campus-Connect
 ```
 
-### 2. Create and activate a Virtual Environment
+### 2. Create and Activate Virtual Environment
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
@@ -69,7 +192,79 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 4. Run the Phase 1 Diagnostic
+### 4. Initialize Local SQLite Database
+```powershell
+python database/connection.py
+```
+*(Creates `data/campus_connect.db` and seeds default administrator: `admin` / `Admin@Campus2026`)*
+
+### 5. Launch the Application
 ```powershell
 python main.py
+```
+
+---
+
+## 🧪 Automated Testing Suite
+
+CampusConnect uses standard Python `unittest`. Every phase has dedicated, self-contained tests using in-memory databases to guarantee safety:
+
+```powershell
+python -m unittest discover tests
+```
+
+#### Current Test Results:
+```text
+Ran 39 tests in 8.049s
+OK
+```
+
+---
+
+## 📂 Directory Structure
+
+```text
+Campus-Connect/
+│
+├── main.py                     # Primary execution entry point
+├── requirements.txt            # Python dependencies (Matplotlib, Pandas)
+├── .gitignore                  # Git ignore rules
+├── README.md                   # Comprehensive phase-wise project manual
+│
+├── database/                   # Database persistence tier
+│   ├── __init__.py
+│   ├── schema.sql              # Relational DDL schema & indexes
+│   ├── connection.py           # Connection factory, transactions, admin seeder
+│   └── repository.py           # UserRepository, ItemRepository, ClaimRepository
+│
+├── models/                     # Domain entity dataclasses & validation
+│   ├── __init__.py
+│   ├── user.py                 # User model & validation rules
+│   ├── item.py                 # Item model, categories, & status checks
+│   └── claim.py                # Claim model & ownership proof validation
+│
+├── services/                   # Business logic tier
+│   ├── __init__.py
+│   ├── auth_service.py         # Registration, login, password management
+│   └── session_manager.py      # Session state & RBAC decorators (@require_auth, @require_admin)
+│
+├── gui/                        # Presentation UI tier (Phases 5, 7, 8)
+│   └── __init__.py
+│
+├── analytics/                  # Matplotlib & Pandas reporting (Phase 8)
+│   └── __init__.py
+│
+├── tests/                      # Automated unit test suite
+│   ├── __init__.py
+│   ├── test_phase1.py          # Setup & environment tests (4 tests)
+│   ├── test_database.py        # Schema, constraints, & indexes tests (10 tests)
+│   ├── test_models.py          # Domain model invariant tests (6 tests)
+│   ├── test_repository.py      # CRUD, filtering, & safe delete tests (6 tests)
+│   └── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
+│
+├── data/                       # Local persistent storage (gitignored .db)
+│   └── .gitkeep
+│
+└── assets/                     # Application visual assets
+    └── .gitkeep
 ```

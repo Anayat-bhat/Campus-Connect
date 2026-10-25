@@ -103,6 +103,17 @@ class UserRepository:
             )
             return cursor.rowcount > 0
 
+    def update_password(self, user_id: int, password_hash: str, salt: str) -> bool:
+        """Update a user's password hash and salt."""
+        if not password_hash or not salt:
+            raise ValueError("Password hash and salt cannot be empty.")
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                "UPDATE users SET password_hash = ?, salt = ? WHERE id = ?",
+                (password_hash, salt, user_id)
+            )
+            return cursor.rowcount > 0
+
     def delete(self, user_id: int) -> bool:
         """Delete a user account by primary key ID."""
         with get_db_cursor(self.db_path) as cursor:
