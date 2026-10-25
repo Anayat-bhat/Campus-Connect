@@ -234,8 +234,39 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
-### Upcoming Phases (Phase 8 – Phase 10)
-- **Phase 8**: Dynamic Analytics Dashboard with Matplotlib Visualizations
+### Phase 8: Dynamic Analytics Dashboard with Matplotlib Visualizations
+- **Objectives**: Build an analytical intelligence engine that ingests relational operational data into Pandas DataFrames, calculates campus recovery and resolution KPIs, and renders responsive Matplotlib charts embedded directly into the Tkinter desktop GUI.
+- **Components Built**:
+  - `analytics/metrics.py`:
+    - `get_items_dataframe()`: Loads SQLite items into Pandas DataFrame with typed schema.
+    - `get_summary_kpis()`: Aggregates total reports, lost vs found counts, returned count, active pending claims, and recovery/resolution rate percentage (`returned / found * 100`).
+    - `get_category_distribution()`: Category frequency Series.
+    - `get_location_hotspots()`: Frequency rankings of top campus loss/recovery locations.
+    - `get_status_distribution()`: Breakdown of item lifecycle statuses.
+  - `analytics/chart_builder.py`:
+    - Uses non-interactive `Agg` backend with coordinated slate/indigo aesthetic styling.
+    - `create_category_donut()`: Donut chart with percentage callouts and legend.
+    - `create_location_bar()`: Horizontal bar chart ranking campus location hotspots with value labels.
+    - `create_overview_dashboard()`: Dual-panel composite figure showing Category distribution alongside Location hotspots.
+  - `gui/analytics_frame.py`:
+    - Top KPI cards displaying Total Reports, Lost Items, Found Items, Returned to Owner, and Recovery Rate %.
+    - Dynamic chart mode switcher (Dual Dashboard, Category Donut, Campus Hotspots).
+    - Embedded `FigureCanvasTkAgg` canvas with responsive resizing.
+    - One-click "📥 Export Chart" saving high-resolution PNG/PDF image reports.
+  - `gui/main_window.py`: Integrated "📊 Analytics" tab in main application notebook.
+- **Files Created / Updated**:
+  - `analytics/metrics.py`: `AnalyticsMetrics`.
+  - `analytics/chart_builder.py`: `ChartBuilder`.
+  - `analytics/__init__.py`: Exported analytics symbols.
+  - `gui/analytics_frame.py`: `AnalyticsFrame`.
+  - `gui/main_window.py`: Wired Analytics tab with auto-refresh on report creation.
+  - `gui/__init__.py`: Exported `AnalyticsFrame`.
+  - `tests/test_analytics.py`: 6 automated tests validating DataFrame generation, KPI math, series aggregation, figure generation, and canvas mounting.
+- **Acceptance Criteria**: Live KPI calculations, Matplotlib canvas rendered without flicker or memory leaks, chart exporting functions properly; 63/63 tests pass.
+
+---
+
+### Upcoming Phases (Phase 9 – Phase 10)
 - **Phase 9**: End-to-End System Integration & Edge-Case Hardening
 - **Phase 10**: Project Packaging, User Guide, and Viva Presentation Defense
 
@@ -283,7 +314,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 57 tests in 11.381s
+Ran 63 tests in 9.961s
 OK
 ```
 
@@ -329,10 +360,13 @@ Campus-Connect/
 │   ├── item_details_dialog.py  # Modal item inspection & action triggers
 │   ├── match_dialog.py         # Algorithmic match viewer with explanation breakdown
 │   ├── claim_dialog.py         # Ownership proof submission modal
-│   └── claims_manager_frame.py # Claims queue and status tracker
+│   ├── claims_manager_frame.py # Claims queue and status tracker
+│   └── analytics_frame.py      # Embedded Matplotlib KPI dashboard & chart exporter
 │
-├── analytics/                  # Matplotlib & Pandas reporting (Phase 8)
-│   └── __init__.py
+├── analytics/                  # Matplotlib & Pandas reporting
+│   ├── __init__.py
+│   ├── metrics.py              # Operational KPIs & DataFrame transformations
+│   └── chart_builder.py        # Donut charts, hotspot bars & dual dashboards
 │
 ├── tests/                      # Automated unit test suite
 │   ├── __init__.py
@@ -343,7 +377,8 @@ Campus-Connect/
 │   ├── test_auth_service.py    # Authentication, session, & RBAC tests (13 tests)
 │   ├── test_gui.py             # Presentation layer, filters, & views (6 tests)
 │   ├── test_matching_service.py# Multi-factor matching & explainability (7 tests)
-│   └── test_claim_service.py   # Claim workflows & ACID handover transactions (5 tests)
+│   ├── test_claim_service.py   # Claim workflows & ACID handover transactions (5 tests)
+│   └── test_analytics.py       # DataFrame KPIs & Matplotlib chart generation (6 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep

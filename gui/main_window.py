@@ -122,6 +122,15 @@ class MainWindow(ttk.Frame):
         )
         self.notebook.add(self.claims_tab, text=claims_tab_title)
 
+        # Tab 5: Analytics & Insights
+        from gui.analytics_frame import AnalyticsFrame
+        self.analytics_tab = AnalyticsFrame(
+            parent=self.notebook,
+            db_path=self.db_path,
+            session=self.session
+        )
+        self.notebook.add(self.analytics_tab, text="  📊 Analytics  ")
+
         # Listen for tab changes to auto-refresh data
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -134,11 +143,14 @@ class MainWindow(ttk.Frame):
             self.my_items_tab.refresh()
         elif selected_index == 3:
             self.claims_tab.refresh()
+        elif selected_index == 4:
+            self.analytics_tab.refresh()
 
     def _on_item_created(self, item_id: int) -> None:
         """Handle new item submission by refreshing views and switching to search tab."""
         self.search_tab.refresh()
         self.my_items_tab.refresh()
+        self.analytics_tab.refresh()
         self.notebook.select(self.search_tab)
 
     def _on_claim_item(self, item: Item) -> None:
