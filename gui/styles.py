@@ -7,27 +7,27 @@ import tkinter as tk
 from tkinter import ttk
 
 
-# Design System Color Palette
+# Design System Color Palette (Signature #fcf8f9 and #a21721)
 COLORS = {
-    "bg_main": "#f8fafc",        # Slate 50
-    "bg_card": "#ffffff",        # White
-    "bg_sidebar": "#0f172a",     # Slate 900
-    "primary": "#2563eb",        # Blue 600
-    "primary_hover": "#1d4ed8",  # Blue 700
-    "secondary": "#64748b",      # Slate 500
-    "secondary_hover": "#475569",# Slate 600
-    "success": "#16a34a",        # Green 600
-    "success_hover": "#15803d",  # Green 700
-    "danger": "#dc2626",         # Red 600
-    "danger_hover": "#b91c1c",   # Red 700
-    "warning": "#d97706",        # Amber 600
-    "text_primary": "#0f172a",   # Slate 900
-    "text_secondary": "#475569", # Slate 600
-    "text_muted": "#94a3b8",     # Slate 400
-    "border": "#e2e8f0",         # Slate 200
-    "border_focus": "#3b82f6",   # Blue 500
-    "table_header": "#f1f5f9",   # Slate 100
-    "table_alt_row": "#f8fafc",  # Slate 50
+    "bg_main": "#fcf8f9",        # Porcelain Rose
+    "bg_card": "#ffffff",        # Pure White
+    "bg_sidebar": "#1c0507",     # Deep Velvet Burgundy
+    "primary": "#a21721",        # Crimson Ruby
+    "primary_hover": "#851119",  # Deep Crimson
+    "secondary": "#703b40",      # Dusty Rose Slate
+    "secondary_hover": "#542c30",# Muted Plum
+    "success": "#1b7a48",        # Forest Emerald
+    "success_hover": "#145c36",  # Deep Emerald
+    "danger": "#a21721",         # Crimson Danger
+    "danger_hover": "#851119",   # Dark Crimson
+    "warning": "#b86200",        # Warm Amber
+    "text_primary": "#1f0709",   # Deep Obsidian Brown
+    "text_secondary": "#5e3034", # Warm Crimson Slate
+    "text_muted": "#8e6266",     # Muted Rose
+    "border": "#ebdada",         # Soft Rose Border
+    "border_focus": "#a21721",   # Crimson Focus
+    "table_header": "#f7edee",   # Soft Crimson Wash
+    "table_alt_row": "#fcf8f9",  # Porcelain Wash
 }
 
 FONTS = {
@@ -75,19 +75,19 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     )
     style.map(
         "Primary.TButton",
-        background=[("active", COLORS["primary_hover"]), ("disabled", "#93c5fd")],
+        background=[("active", COLORS["primary_hover"]), ("disabled", "#e5b7ba")],
         foreground=[("disabled", "#ffffff")]
     )
 
     style.configure(
         "Secondary.TButton",
-        background="#e2e8f0",
+        background="#ebdada",
         foreground=COLORS["text_primary"],
         font=FONTS["button"],
         padding=(12, 7),
         borderwidth=0,
     )
-    style.map("Secondary.TButton", background=[("active", "#cbd5e1")])
+    style.map("Secondary.TButton", background=[("active", "#dfc5c7")])
 
     style.configure(
         "Success.TButton",
@@ -117,7 +117,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     style.configure("TNotebook", background=COLORS["bg_main"], tabmargins=[2, 5, 2, 0], borderwidth=0)
     style.configure(
         "TNotebook.Tab",
-        background="#e2e8f0",
+        background="#ebdada",
         foreground=COLORS["text_secondary"],
         padding=[16, 8],
         font=FONTS["body_bold"],

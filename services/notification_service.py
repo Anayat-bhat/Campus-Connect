@@ -85,7 +85,7 @@ class NotificationService:
                 continue
 
             pct = int(round(m.overall_score))
-            title = f"🤖 Potential {new_item.type.capitalize()} Match Found ({pct}%)"
+            title = f"🤖 Potential Match Found ({pct}%)"
             msg = (
                 f"Your reported {target.type} item '{target.title}' has a strong {pct}% algorithmic match "
                 f"with recently reported {new_item.type} item '{new_item.title}' at {new_item.location}. "

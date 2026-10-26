@@ -21,6 +21,21 @@ TYPE_ICONS = {
     "SYSTEM": "📢",
 }
 
+TYPE_LABELS = {
+    "MATCH_FOUND": "Match",
+    "CLAIM_SUBMITTED": "Claim Filed",
+    "CLAIM_APPROVED": "Approved",
+    "CLAIM_REJECTED": "Rejected",
+    "SYSTEM": "System",
+}
+
+
+def format_notification_type(notif_type: str) -> str:
+    """Format notification type with appropriate emoji and clean label."""
+    icon = TYPE_ICONS.get(notif_type, "📢")
+    label = TYPE_LABELS.get(notif_type, notif_type.replace("_", " ").title())
+    return f"{icon} {label}"
+
 
 class NotificationCenterDialog(tk.Toplevel):
     """Modal dialog presenting the user's notifications and match alerts."""
@@ -41,8 +56,8 @@ class NotificationCenterDialog(tk.Toplevel):
         self.notif_map: Dict[str, Notification] = {}
 
         self.title("🔔 CampusConnect Notifications & Match Alerts")
-        self.geometry("640x540")
-        self.minsize(560, 460)
+        self.geometry("740x620")
+        self.minsize(660, 520)
         self.transient(parent)
         self.grab_set()
 
@@ -51,12 +66,12 @@ class NotificationCenterDialog(tk.Toplevel):
 
     def _build_ui(self) -> None:
         """Construct the notification viewer interface."""
-        container = ttk.Frame(self, padding="20")
+        container = ttk.Frame(self, padding="18")
         container.pack(fill="both", expand=True)
 
-        # Header
+        # 1. Header (Top)
         header = ttk.Frame(container)
-        header.pack(fill="x", pady=(0, 12))
+        header.pack(fill="x", pady=(0, 10))
 
         ttk.Label(
             header,
@@ -68,7 +83,7 @@ class NotificationCenterDialog(tk.Toplevel):
             header,
             text="",
             font=("Segoe UI", 9),
-            foreground="#64748b"
+            foreground="#8e6266"
         )
         self.count_lbl.pack(side="left", padx=(10, 0))
 
@@ -80,55 +95,9 @@ class NotificationCenterDialog(tk.Toplevel):
         )
         mark_all_btn.pack(side="right")
 
-        # Split pane: Top list, Bottom detail box
-        table_card = ttk.Frame(container, style="Card.TFrame", padding="8")
-        table_card.pack(fill="both", expand=True, pady=(0, 12))
-
-        columns = ("type", "status", "title", "date")
-        self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse", height=7)
-
-        self.tree.heading("type", text="Type", anchor="center")
-        self.tree.heading("status", text="Status", anchor="center")
-        self.tree.heading("title", text="Alert Title", anchor="w")
-        self.tree.heading("date", text="Date & Time", anchor="center")
-
-        self.tree.column("type", width=70, minwidth=60, anchor="center")
-        self.tree.column("status", width=75, minwidth=65, anchor="center")
-        self.tree.column("title", width=280, minwidth=200, anchor="w")
-        self.tree.column("date", width=120, minwidth=100, anchor="center")
-
-        scrollbar = ttk.Scrollbar(table_card, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        self.tree.tag_configure("UNREAD", font=("Segoe UI", 9, "bold"), foreground="#2563eb")
-        self.tree.tag_configure("READ", font=("Segoe UI", 9), foreground="#64748b")
-
-        self.tree.bind("<<TreeviewSelect>>", self._on_select_notification)
-
-        # Message Detail Box
-        detail_card = ttk.Frame(container, style="Card.TFrame", padding="12")
-        detail_card.pack(fill="both", expand=True, pady=(0, 12))
-
-        ttk.Label(detail_card, text="Alert Message", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 4))
-        self.message_box = tk.Text(
-            detail_card,
-            wrap="word",
-            font=("Segoe UI", 10),
-            height=4,
-            relief="solid",
-            borderwidth=1,
-            padx=8,
-            pady=8
-        )
-        self.message_box.pack(fill="both", expand=True)
-        self.message_box.configure(state="disabled")
-
-        # Action Footer
+        # 2. Action Footer (Pinned to bottom first to ensure it is never clipped)
         footer = ttk.Frame(container)
-        footer.pack(fill="x")
+        footer.pack(side="bottom", fill="x", pady=(12, 0))
 
         self.inspect_btn = ttk.Button(
             footer,
@@ -156,6 +125,60 @@ class NotificationCenterDialog(tk.Toplevel):
         )
         close_btn.pack(side="right")
 
+        # 3. Message Detail Box (Pinned above footer)
+        detail_card = ttk.Frame(container, style="Card.TFrame", padding="12")
+        detail_card.pack(side="bottom", fill="x", pady=(8, 0))
+
+        ttk.Label(detail_card, text="Alert Message", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 4))
+        
+        msg_frame = ttk.Frame(detail_card)
+        msg_frame.pack(fill="x", expand=False)
+
+        self.message_box = tk.Text(
+            msg_frame,
+            wrap="word",
+            font=("Segoe UI", 10),
+            height=4,
+            relief="solid",
+            borderwidth=1,
+            padx=8,
+            pady=8
+        )
+        msg_scroll = ttk.Scrollbar(msg_frame, orient="vertical", command=self.message_box.yview)
+        self.message_box.configure(yscrollcommand=msg_scroll.set)
+
+        self.message_box.pack(side="left", fill="both", expand=True)
+        msg_scroll.pack(side="right", fill="y")
+        self.message_box.configure(state="disabled")
+
+        # 4. Table Card (Top/Middle, expands to fill remaining space)
+        table_card = ttk.Frame(container, style="Card.TFrame", padding="8")
+        table_card.pack(fill="both", expand=True)
+
+        columns = ("type", "status", "title", "date")
+        self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse", height=7)
+
+        self.tree.heading("type", text="Type", anchor="w")
+        self.tree.heading("status", text="Status", anchor="center")
+        self.tree.heading("title", text="Alert Title", anchor="w")
+        self.tree.heading("date", text="Date & Time", anchor="center")
+
+        self.tree.column("type", width=125, minwidth=110, anchor="w")
+        self.tree.column("status", width=75, minwidth=65, anchor="center")
+        self.tree.column("title", width=340, minwidth=220, anchor="w")
+        self.tree.column("date", width=130, minwidth=110, anchor="center")
+
+        scrollbar = ttk.Scrollbar(table_card, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.tree.tag_configure("UNREAD", font=("Segoe UI", 9, "bold"), foreground="#a21721")
+        self.tree.tag_configure("READ", font=("Segoe UI", 9), foreground="#8e6266")
+
+        self.tree.bind("<<TreeviewSelect>>", self._on_select_notification)
+
     def _load_notifications(self) -> None:
         """Fetch and populate notifications."""
         for child in self.tree.get_children():
@@ -170,7 +193,6 @@ class NotificationCenterDialog(tk.Toplevel):
             if not n.is_read:
                 unread_count += 1
 
-            icon = TYPE_ICONS.get(n.type, "📢")
             status_text = "🔵 New" if not n.is_read else "Read"
             tag = "UNREAD" if not n.is_read else "READ"
 
@@ -179,7 +201,7 @@ class NotificationCenterDialog(tk.Toplevel):
                 "end",
                 iid=str(n.id),
                 values=(
-                    f"{icon} {n.type[:5]}",
+                    format_notification_type(n.type),
                     status_text,
                     n.title,
                     n.created_at[:16] if n.created_at else ""
@@ -209,7 +231,7 @@ class NotificationCenterDialog(tk.Toplevel):
             notif.is_read = True
             # Update row appearance
             self.tree.item(str(notif.id), tags=("READ",), values=(
-                f"{TYPE_ICONS.get(notif.type, '📢')} {notif.type[:5]}",
+                format_notification_type(notif.type),
                 "Read",
                 notif.title,
                 notif.created_at[:16] if notif.created_at else ""

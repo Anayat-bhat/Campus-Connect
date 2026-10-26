@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CampusConnect — Smart Lost & Found</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#a21721">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CampusConnect">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="/static/css/style.css?v=2.0">
+</head>
+<body>
+  <div id="app" class="app-layout">
+    
+    <!-- Top Global App Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-container" onclick="app.navigate('browse')">
+          <div class="brand-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">CampusConnect</span>
+            <span class="brand-subtitle">Smart Lost & Found</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Bar -->
+      <nav class="desktop-nav">
+        <button class="nav-item active" data-tab="browse" onclick="app.navigate('browse')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Browse
+        </button>
+        <button class="nav-item" data-tab="matches" onclick="app.navigate('matches')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Smart Matches
+        </button>
+        <button class="nav-item" data-tab="report" onclick="app.navigate('report')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+          Report Item
+        </button>
+        <button class="nav-item" data-tab="my-items" onclick="app.navigate('my-items')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-7L10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+          My Reports
+        </button>
+        <button class="nav-item" data-tab="claims" onclick="app.navigate('claims')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Claims & Review
+        </button>
+        <button class="nav-item" data-tab="analytics" onclick="app.navigate('analytics')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+          Analytics
+        </button>
+      </nav>
+
+      <div class="header-right">
+        <!-- PWA Install Prompt Button (shown when available) -->
+        <button id="pwaInstallBtn" class="btn btn-sm btn-ghost pwa-btn" style="display: none;" onclick="app.promptPwaInstall()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Install App
+        </button>
+
+        <!-- Notification Bell -->
+        <button class="icon-btn notif-bell" onclick="app.openNotificationsModal()" title="Notifications & Smart Alerts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <span id="notifBadge" class="badge-dot" style="display: none;">0</span>
+        </button>
+
+        <!-- Theme Toggle (Dark/Light) -->
+        <button class="icon-btn" onclick="app.toggleTheme()" title="Toggle Theme">
+          <svg id="themeIconDark" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg id="themeIconLight" style="display: none;" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <!-- User Profile & Quick Demo Switcher -->
+        <div class="user-chip" onclick="app.openUserSwitcherModal()" title="Switch active student or admin account">
+          <div class="user-avatar" id="userAvatar">R</div>
+          <div class="user-info">
+            <span class="user-name" id="userName">Rohit Kumar</span>
+            <span class="user-role" id="userRoleBadge">STUDENT</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Content Container -->
+    <main class="app-main">
+      
+      <!-- ============================================ -->
+      <!-- TAB 1: BROWSE & SEARCH CATALOG -->
+      <!-- ============================================ -->
+      <section id="tab-browse" class="tab-pane active">
+        <!-- Hero Search Section -->
+        <div class="search-hero">
+          <div class="search-bar-wrapper">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search AirPods, ID card, Dell charger, backpack, room..." oninput="app.onSearchInput(this.value)">
+            <button id="clearSearchBtn" class="clear-btn" style="display: none;" onclick="app.clearSearch()">✕</button>
+          </div>
+
+          <!-- Type Filter Toggle -->
+          <div class="type-filter-segmented">
+            <button class="seg-btn active" data-type="ALL" onclick="app.setTypeFilter('ALL')">All Reports</button>
+            <button class="seg-btn type-lost" data-type="LOST" onclick="app.setTypeFilter('LOST')">
+              <span class="dot dot-lost"></span> Lost Items
+            </button>
+            <button class="seg-btn type-found" data-type="FOUND" onclick="app.setTypeFilter('FOUND')">
+              <span class="dot dot-found"></span> Found Items
+            </button>
+          </div>
+
+          <!-- Category Chips -->
+          <div class="category-scroll">
+            <button class="chip active" data-cat="ALL" onclick="app.setCategoryFilter('ALL')">All Categories</button>
+            <button class="chip" data-cat="Electronics" onclick="app.setCategoryFilter('Electronics')">💻 Electronics</button>
+            <button class="chip" data-cat="Identity cards" onclick="app.setCategoryFilter('Identity cards')">🪪 Identity Cards</button>
+            <button class="chip" data-cat="Accessories" onclick="app.setCategoryFilter('Accessories')">⌚ Accessories</button>
+            <button class="chip" data-cat="Books and stationery" onclick="app.setCategoryFilter('Books and stationery')">📚 Books & Notes</button>
+            <button class="chip" data-cat="Personal belongings" onclick="app.setCategoryFilter('Personal belongings')">🎒 Personal Belongings</button>
+            <button class="chip" data-cat="Clothing" onclick="app.setCategoryFilter('Clothing')">👕 Clothing</button>
+            <button class="chip" data-cat="Keys" onclick="app.setCategoryFilter('Keys')">🔑 Keys</button>
+          </div>
+        </div>
+
+        <!-- Filter Stats & Quick Action Bar -->
+        <div class="catalog-toolbar">
+          <div class="catalog-counter">
+            <span id="catalogCount">Loading campus reports...</span>
+          </div>
+          <div class="catalog-actions">
+            <select id="statusFilter" class="select-sm" onchange="app.setStatusFilter(this.value)">
+              <option value="ALL">All Statuses</option>
+              <option value="OPEN">Open Only</option>
+              <option value="CLAIM_PENDING">Claim Pending</option>
+              <option value="RETURNED">Resolved / Returned</option>
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="app.navigate('report')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Report Item
+            </button>
+          </div>
+        </div>
+
+        <!-- Item Cards Grid -->
+        <div id="itemsGrid" class="items-grid">
+          <!-- Dynamically populated by app.js -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="itemsEmptyState" class="empty-state" style="display: none;">
+          <div class="empty-icon">🔍</div>
+          <h3>No Items Match Your Filter</h3>
+          <p>Try adjusting your search keywords, category chips, or status filter.</p>
+          <button class="btn btn-secondary btn-sm" onclick="app.resetAllFilters()">Clear All Filters</button>
+        </div>
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- TAB 2: SMART MATCH RADAR -->
+      <!-- ============================================ -->
+      <section id="tab-matches" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">🤖 Smart Algorithmic Match Radar</h2>
+            <p class="pane-desc">Calculates explainable counterpart matches using NLP term Jaccard similarity, category taxonomy, date proximity, and campus location clustering.</p>
+          </div>
+        </div>
+
+        <!-- Select Item to Match -->
+        <div class="card match-selector-card">
+          <label class="form-label">Select Your Item to Inspect Potential Matches:</label>
+          <div class="match-select-row">
+            <select id="matchItemSelect" class="form-input" onchange="app.onMatchItemSelected(this.value)">
+              <option value="">Select an item to scan...</option>
+            </select>
+            <button class="btn btn-primary" onclick="app.runMatchScanForCurrentItem()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Scan Matches
+            </button>
+          </div>
+        </div>
+
+        <div id="matchesResultsArea">
+          <div class="empty-state">
+            <div class="empty-icon">🎯</div>
+            <h3>Select an item above to compute smart matches</h3>
+            <p>Our algorithm compares category, title keywords, location distance, and dates.</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- TAB 3: REPORT ITEM -->
+      <!-- ============================================ -->
+      <section id="tab-report" class="tab-pane">
+        <div class="report-container">
+          <div class="card report-card">
+            <div class="report-header">
+              <h2 class="report-title">📝 Report Lost or Found Item</h2>
+              <p class="report-subtitle">Submit details to immediately alert matching counterpart owners on campus.</p>
+            </div>
+
+            <form id="reportForm" onsubmit="app.handleReportSubmit(event)">
+              <!-- Segmented Lost vs Found Selection -->
+              <div class="form-group">
+                <label class="form-label">Report Type *</label>
+                <div class="type-selector">
+                  <label class="type-option">
+                    <input type="radio" name="report_type" value="LOST" checked onchange="app.onReportTypeChange('LOST')">
+                    <div class="type-box type-lost">
+                      <span class="type-icon">🔍</span>
+                      <div class="type-title">I Lost Something</div>
+                      <div class="type-desc">I am searching for my missing property</div>
+                    </div>
+                  </label>
+                  <label class="type-option">
+                    <input type="radio" name="report_type" value="FOUND" onchange="app.onReportTypeChange('FOUND')">
+                    <div class="type-box type-found">
+                      <span class="type-icon">📦</span>
+                      <div class="type-title">I Found Something</div>
+                      <div class="type-desc">I discovered an item and want to return it</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Title -->
+              <div class="form-group">
+                <label class="form-label" for="reportTitle">Item Name / Title *</label>
+                <input type="text" id="reportTitle" class="form-input" placeholder="e.g. Dell 65W Laptop Charger, Blue Hydro Flask, Casio Calculator" required>
+                <small class="form-hint">Be specific with brand, model, or color for better algorithmic match scores.</small>
+              </div>
+
+              <!-- Category & Date Grid -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reportCategory">Category *</label>
+                  <select id="reportCategory" class="form-input" required>
+                    <option value="Electronics">💻 Electronics</option>
+                    <option value="Identity cards">🪪 Identity Cards & Badges</option>
+                    <option value="Accessories">⌚ Accessories & Jewelry</option>
+                    <option value="Books and stationery">📚 Books & Stationery</option>
+                    <option value="Personal belongings">🎒 Personal Belongings / Bags</option>
+                    <option value="Clothing">👕 Clothing</option>
+                    <option value="Keys">🔑 Keys & Access Fobs</option>
+                    <option value="Other">📦 Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reportDate">Date Lost / Found *</label>
+                  <input type="date" id="reportDate" class="form-input" required>
+                </div>
+              </div>
+
+              <!-- Location -->
+              <div class="form-group">
+                <label class="form-label" for="reportLocation">Campus Location *</label>
+                <input type="text" id="reportLocation" class="form-input" placeholder="e.g. Central Library 2nd Floor, Block B Lab 3, Cafeteria" required>
+                <div class="location-chips">
+                  <span class="loc-chip" onclick="app.setReportLocation('Central Library')">Central Library</span>
+                  <span class="loc-chip" onclick="app.setReportLocation('Block B Lab 3')">Block B Lab 3</span>
+                  <span class="loc-chip" onclick="app.setReportLocation('Cafeteria Ground Floor')">Cafeteria</span>
+                  <span class="loc-chip" onclick="app.setReportLocation('Sports Complex Badminton Court')">Sports Complex</span>
+                  <span class="loc-chip" onclick="app.setReportLocation('Student Center')">Student Center</span>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="form-group">
+                <label class="form-label" for="reportDesc">Description & Distinguishing Features *</label>
+                <textarea id="reportDesc" class="form-input" rows="3" placeholder="Provide distinct characteristics like scratches, stickers, accessories, protective covers, or condition." required></textarea>
+              </div>
+
+              <!-- Photo Upload -->
+              <div class="form-group">
+                <label class="form-label">Attach Item Photograph (Optional)</label>
+                <div class="file-dropzone" onclick="document.getElementById('reportPhoto').click()">
+                  <input type="file" id="reportPhoto" accept="image/*" style="display: none;" onchange="app.handlePhotoSelect(event)">
+                  <div id="dropzoneContent">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    <p class="dropzone-text">Tap to take a photo or select from library</p>
+                    <span class="dropzone-sub">PNG, JPG up to 10MB</span>
+                  </div>
+                  <div id="dropzonePreview" style="display: none;" class="dropzone-preview">
+                    <img id="previewImg" src="" alt="Item Preview">
+                    <button type="button" class="btn-remove-photo" onclick="event.stopPropagation(); app.removePhoto();">✕ Remove</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="app.navigate('browse')">Cancel</button>
+                <button type="submit" id="submitReportBtn" class="btn btn-primary btn-lg">
+                  Submit Report & Trigger Smart Match
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- TAB 4: MY REPORTS & ACTIVITY -->
+      <!-- ============================================ -->
+      <section id="tab-my-items" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">📦 My Campus Reports & Claims</h2>
+            <p class="pane-desc">Manage all reports you have created and track the status of items you claimed.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="app.navigate('report')">
+            + New Report
+          </button>
+        </div>
+
+        <div class="my-items-tabs">
+          <button class="subtab-btn active" onclick="app.switchMySubtab('reports')">My Reported Items (<span id="myReportsCount">0</span>)</button>
+          <button class="subtab-btn" onclick="app.switchMySubtab('claims')">My Submitted Claims (<span id="myClaimsCount">0</span>)</button>
+        </div>
+
+        <div id="myReportsArea" class="items-grid"></div>
+        <div id="myClaimsArea" class="claims-list" style="display: none;"></div>
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- TAB 5: CLAIMS & ADMIN VERIFICATION -->
+      <!-- ============================================ -->
+      <section id="tab-claims" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">🛡️ Claims & Verification Center</h2>
+            <p class="pane-desc" id="claimsPaneDesc">Review student ownership claims, inspect distinguishing proof, and authorize handovers.</p>
+          </div>
+          <div id="adminBadgeNotice" class="badge badge-admin" style="display: none;">Admin Access Granted</div>
+        </div>
+
+        <!-- Filter Sub-nav for Claims -->
+        <div class="claims-filter-row">
+          <button class="chip active" data-claim-status="ALL" onclick="app.filterClaims('ALL')">All Claims</button>
+          <button class="chip" data-claim-status="PENDING" onclick="app.filterClaims('PENDING')">⏳ Pending Review</button>
+          <button class="chip" data-claim-status="APPROVED" onclick="app.filterClaims('APPROVED')">✅ Approved Handover</button>
+          <button class="chip" data-claim-status="REJECTED" onclick="app.filterClaims('REJECTED')">❌ Rejected</button>
+        </div>
+
+        <div id="claimsListContainer" class="claims-container">
+          <!-- Loaded dynamically -->
+        </div>
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- TAB 6: ANALYTICS & INSIGHTS -->
+      <!-- ============================================ -->
+      <section id="tab-analytics" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h2 class="pane-title">📊 Campus Analytics & Resolution Metrics</h2>
+            <p class="pane-desc">Real-time statistics on item recovery rates, categories, and campus hotspots.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="app.downloadCsvExport()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card card">
+            <div class="kpi-icon-wrap icon-blue">📋</div>
+            <div class="kpi-data">
+              <span class="kpi-val" id="kpiTotalItems">0</span>
+              <span class="kpi-label">Total Reports</span>
+            </div>
+          </div>
+          <div class="kpi-card card">
+            <div class="kpi-icon-wrap icon-green">🎉</div>
+            <div class="kpi-data">
+              <span class="kpi-val" id="kpiRecoveryRate">0%</span>
+              <span class="kpi-label">Resolution Rate</span>
+            </div>
+          </div>
+          <div class="kpi-card card">
+            <div class="kpi-icon-wrap icon-amber">⏳</div>
+            <div class="kpi-data">
+              <span class="kpi-val" id="kpiPendingClaims">0</span>
+              <span class="kpi-label">Pending Claims</span>
+            </div>
+          </div>
+          <div class="kpi-card card">
+            <div class="kpi-icon-wrap icon-purple">✅</div>
+            <div class="kpi-data">
+              <span class="kpi-val" id="kpiReturnedItems">0</span>
+              <span class="kpi-label">Recovered & Returned</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual Analytics Rows -->
+        <div class="analytics-row">
+          <div class="card analytics-card">
+            <h3 class="card-title">Category Breakdown</h3>
+            <div id="categoryChartContainer" class="bar-chart-container"></div>
+          </div>
+          <div class="card analytics-card">
+            <h3 class="card-title">Campus Hotspots (Top Locations)</h3>
+            <div id="hotspotsContainer" class="hotspots-list"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Mobile Bottom App Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+      <button class="bottom-nav-item active" data-tab="browse" onclick="app.navigate('browse')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Browse</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="matches" onclick="app.navigate('matches')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        <span>Matches</span>
+      </button>
+      <button class="bottom-nav-item fab-center" data-tab="report" onclick="app.navigate('report')">
+        <div class="fab-circle">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <span>Report</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="claims" onclick="app.navigate('claims')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Claims</span>
+      </button>
+      <button class="bottom-nav-item" data-tab="analytics" onclick="app.navigate('analytics')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span>Stats</span>
+      </button>
+    </nav>
+
+    <!-- ============================================ -->
+    <!-- MODALS -->
+    <!-- ============================================ -->
+
+    <!-- Item Details Modal -->
+    <div id="itemDetailsModal" class="modal-backdrop" onclick="app.closeModal('itemDetailsModal')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-pill"></div>
+          <button class="modal-close-btn" onclick="app.closeModal('itemDetailsModal')">✕</button>
+        </div>
+        <div id="itemDetailsContent" class="modal-body">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Match Radar Details Modal -->
+    <div id="matchRadarModal" class="modal-backdrop" onclick="app.closeModal('matchRadarModal')">
+      <div class="modal-sheet modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">🤖 Explainable Match Analysis</h3>
+          <button class="modal-close-btn" onclick="app.closeModal('matchRadarModal')">✕</button>
+        </div>
+        <div id="matchRadarContent" class="modal-body">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Claim Submission Modal -->
+    <div id="claimModal" class="modal-backdrop" onclick="app.closeModal('claimModal')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">✋ Claim Item Ownership</h3>
+          <button class="modal-close-btn" onclick="app.closeModal('claimModal')">✕</button>
+        </div>
+        <form id="claimSubmitForm" class="modal-body" onsubmit="app.handleClaimSubmit(event)">
+          <input type="hidden" id="claimItemId">
+          <div class="claim-item-summary card">
+            <span class="badge badge-found">FOUND ITEM</span>
+            <h4 id="claimItemTitle" class="mt-2">Item Title</h4>
+            <p id="claimItemLocation" class="text-muted text-sm"></p>
+          </div>
+          <div class="alert alert-warning mt-3">
+            <strong>⚠️ Proof of Ownership Required:</strong>
+            Describe unique distinguishing details not mentioned publicly (e.g. engravings, wallpaper, sticker placements, specific scratches, or inside contents).
+          </div>
+          <div class="form-group mt-3">
+            <label class="form-label" for="claimProofText">Distinguishing Proof Details *</label>
+            <textarea id="claimProofText" class="form-input" rows="4" placeholder="e.g. My initials are written on the inside flap, the back cover has a scratch near the logo, or lockscreen password ends in..." required></textarea>
+          </div>
+          <div class="form-actions mt-4">
+            <button type="button" class="btn btn-secondary" onclick="app.closeModal('claimModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit Ownership Claim</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin Review Claim Modal -->
+    <div id="reviewClaimModal" class="modal-backdrop" onclick="app.closeModal('reviewClaimModal')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">🛡️ Review Student Claim</h3>
+          <button class="modal-close-btn" onclick="app.closeModal('reviewClaimModal')">✕</button>
+        </div>
+        <div id="reviewClaimBody" class="modal-body">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Drawer Modal -->
+    <div id="notificationsModal" class="modal-backdrop" onclick="app.closeModal('notificationsModal')">
+      <div class="modal-sheet modal-drawer" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="drawer-title-row">
+            <h3 class="modal-title">🔔 Notifications & Smart Alerts</h3>
+            <button class="btn btn-xs btn-secondary" onclick="app.markAllNotificationsRead()">Mark all as read</button>
+          </div>
+          <button class="modal-close-btn" onclick="app.closeModal('notificationsModal')">✕</button>
+        </div>
+        <div id="notificationsList" class="modal-body notif-scroll">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo User Switcher Modal -->
+    <div id="userSwitcherModal" class="modal-backdrop" onclick="app.closeModal('userSwitcherModal')">
+      <div class="modal-sheet" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 class="modal-title">👤 Switch Demo Profile</h3>
+          <button class="modal-close-btn" onclick="app.closeModal('userSwitcherModal')">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted text-sm mb-3">Quickly switch between campus student accounts and administrator for viva/lab testing without passwords.</p>
+          <div id="demoUsersList" class="demo-users-grid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+  </div>
+
+  <!-- Application Logic -->
+  <script src="/static/js/app.js?v=2.0"></script>
+</body>
+</html>
