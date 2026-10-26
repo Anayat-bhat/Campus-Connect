@@ -1,17 +1,21 @@
 // CampusConnect Service Worker
-const CACHE_NAME = 'campusconnect-v3';
+const CACHE_NAME = 'campusconnect-v5';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/static/css/style.css?v=2.2',
-  '/static/js/app.js?v=2.2',
+  '/static/css/style.css?v=2.4',
+  '/static/js/app.js?v=2.4',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch((err) => {
+        console.warn('[SW] Caching warning:', err);
+      });
+    })
   );
   self.skipWaiting();
 });

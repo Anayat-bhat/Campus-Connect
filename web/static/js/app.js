@@ -424,6 +424,21 @@ class CampusConnectApp {
     const listEl = document.getElementById('demoUsersList');
     if (!listEl) return;
 
+    if (!this.demoUsers || this.demoUsers.length === 0) {
+      listEl.innerHTML = `
+        <div class="empty-state" style="padding: 24px; text-align: center;">
+          <div class="empty-icon">👥</div>
+          <h4 style="margin: 8px 0;">No Registered Accounts Yet</h4>
+          <p class="text-muted text-sm mb-3">Create your first account using 'Sign In / Register' to begin.</p>
+          <button class="btn btn-primary btn-sm" onclick="app.closeModal('userSwitcherModal'); app.openAuthModal('register')">
+            ✨ Create Account
+          </button>
+        </div>
+      `;
+      this.openModal('userSwitcherModal');
+      return;
+    }
+
     listEl.innerHTML = this.demoUsers.map((u) => {
       const isActive = this.currentUser && this.currentUser.id === u.id;
       const roleColor = u.role === 'admin' ? 'badge-admin' : 'badge-found';

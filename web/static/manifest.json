@@ -1,24 +1,40 @@
 {
+  "id": "/",
   "name": "CampusConnect: Smart Lost & Found",
   "short_name": "CampusConnect",
   "description": "Smart University Lost and Found Management System with AI Algorithmic Matching",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#fcf8f9",
   "theme_color": "#a21721",
   "orientation": "portrait-primary",
+  "categories": ["education", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/static/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

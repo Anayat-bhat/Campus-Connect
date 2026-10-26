@@ -49,7 +49,8 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
 # Initialize Core Services
 db_path = DEFAULT_DB_PATH
 init_database(db_path)
-seed_default_admin(db_path)
+if os.environ.get("SEED_DEFAULT_ADMIN", "").lower() in ("true", "1", "yes"):
+    seed_default_admin(db_path)
 
 user_repo = UserRepository(db_path)
 item_repo = ItemRepository(db_path)
