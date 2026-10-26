@@ -19,7 +19,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- Application CSS -->
-  <link rel="stylesheet" href="/static/css/style.css?v=2.0">
+  <link rel="stylesheet" href="/static/css/style.css?v=2.1">
 </head>
 <body>
   <div id="app" class="app-layout">
@@ -486,7 +486,10 @@
     <div id="matchRadarModal" class="modal-backdrop" onclick="app.closeModal('matchRadarModal')">
       <div class="modal-sheet modal-lg" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h3 class="modal-title">🤖 Explainable Match Analysis</h3>
+          <div>
+            <div class="modal-pill"></div>
+            <h3 class="modal-title">🤖 Explainable Match Analysis</h3>
+          </div>
           <button class="modal-close-btn" onclick="app.closeModal('matchRadarModal')">✕</button>
         </div>
         <div id="matchRadarContent" class="modal-body">
@@ -499,7 +502,10 @@
     <div id="claimModal" class="modal-backdrop" onclick="app.closeModal('claimModal')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h3 class="modal-title">✋ Claim Item Ownership</h3>
+          <div>
+            <div class="modal-pill"></div>
+            <h3 class="modal-title">✋ Claim Item Ownership</h3>
+          </div>
           <button class="modal-close-btn" onclick="app.closeModal('claimModal')">✕</button>
         </div>
         <form id="claimSubmitForm" class="modal-body" onsubmit="app.handleClaimSubmit(event)">
@@ -529,7 +535,10 @@
     <div id="reviewClaimModal" class="modal-backdrop" onclick="app.closeModal('reviewClaimModal')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h3 class="modal-title">🛡️ Review Student Claim</h3>
+          <div>
+            <div class="modal-pill"></div>
+            <h3 class="modal-title">🛡️ Review Student Claim</h3>
+          </div>
           <button class="modal-close-btn" onclick="app.closeModal('reviewClaimModal')">✕</button>
         </div>
         <div id="reviewClaimBody" class="modal-body">
@@ -542,9 +551,12 @@
     <div id="notificationsModal" class="modal-backdrop" onclick="app.closeModal('notificationsModal')">
       <div class="modal-sheet modal-drawer" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div class="drawer-title-row">
-            <h3 class="modal-title">🔔 Notifications & Smart Alerts</h3>
-            <button class="btn btn-xs btn-secondary" onclick="app.markAllNotificationsRead()">Mark all as read</button>
+          <div style="flex: 1;">
+            <div class="modal-pill"></div>
+            <div class="drawer-title-row">
+              <h3 class="modal-title">🔔 Notifications & Smart Alerts</h3>
+              <button class="btn btn-xs btn-secondary" onclick="app.markAllNotificationsRead()">Mark all as read</button>
+            </div>
           </div>
           <button class="modal-close-btn" onclick="app.closeModal('notificationsModal')">✕</button>
         </div>
@@ -558,7 +570,10 @@
     <div id="userSwitcherModal" class="modal-backdrop" onclick="app.closeModal('userSwitcherModal')">
       <div class="modal-sheet" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h3 class="modal-title">👤 Switch Demo Profile</h3>
+          <div>
+            <div class="modal-pill"></div>
+            <h3 class="modal-title">👤 Switch Demo Profile</h3>
+          </div>
           <button class="modal-close-btn" onclick="app.closeModal('userSwitcherModal')">✕</button>
         </div>
         <div class="modal-body">
@@ -576,6 +591,6 @@
   </div>
 
   <!-- Application Logic -->
-  <script src="/static/js/app.js?v=2.0"></script>
+  <script src="/static/js/app.js?v=2.1"></script>
 </body>
 </html>
