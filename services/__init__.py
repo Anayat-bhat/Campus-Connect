@@ -30,6 +30,9 @@ from services.image_service import (
     ImageService,
     ImageValidationError,
 )
+from services.pdf_service import (
+    PDFService,
+)
 
 __all__ = [
     "SessionManager",
@@ -48,4 +51,5 @@ __all__ = [
     "NotificationService",
     "ImageService",
     "ImageValidationError",
+    "PDFService",
 ]

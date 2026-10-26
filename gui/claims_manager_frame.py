@@ -56,12 +56,27 @@ class ClaimsManagerFrame(ttk.Frame):
         )
         self.count_lbl.pack(side="left", padx=(12, 0))
 
+        if is_admin:
+            filter_box = ttk.Frame(header_card, style="Card.TFrame")
+            filter_box.pack(side="right")
+            ttk.Label(filter_box, text="Filter:", font=("Segoe UI", 9), background="#ffffff").pack(side="left", padx=(0, 4))
+            self.status_filter_var = tk.StringVar(value="PENDING")
+            self.filter_combo = ttk.Combobox(
+                filter_box,
+                textvariable=self.status_filter_var,
+                values=["PENDING", "APPROVED", "ALL"],
+                state="readonly",
+                width=11
+            )
+            self.filter_combo.pack(side="left")
+            self.filter_combo.bind("<<ComboboxSelected>>", lambda _: self.refresh())
+
         # Table Card
         table_card = ttk.Frame(self, style="Card.TFrame", padding="12")
         table_card.pack(fill="both", expand=True, padx=16, pady=8)
 
         if is_admin:
-            columns = ("claim_id", "item_id", "item_title", "claimant", "proof", "submitted_at")
+            columns = ("claim_id", "item_id", "item_title", "claimant", "proof", "status", "submitted_at")
             self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse")
 
             self.tree.heading("claim_id", text="Claim #", anchor="center")
@@ -69,14 +84,16 @@ class ClaimsManagerFrame(ttk.Frame):
             self.tree.heading("item_title", text="Item Title", anchor="w")
             self.tree.heading("claimant", text="Claimant", anchor="w")
             self.tree.heading("proof", text="Private Proof Description", anchor="w")
+            self.tree.heading("status", text="Status", anchor="center")
             self.tree.heading("submitted_at", text="Submitted Date", anchor="center")
 
             self.tree.column("claim_id", width=60, minwidth=50, anchor="center")
             self.tree.column("item_id", width=55, minwidth=45, anchor="center")
-            self.tree.column("item_title", width=160, minwidth=120, anchor="w")
-            self.tree.column("claimant", width=140, minwidth=110, anchor="w")
-            self.tree.column("proof", width=280, minwidth=180, anchor="w")
-            self.tree.column("submitted_at", width=110, minwidth=90, anchor="center")
+            self.tree.column("item_title", width=150, minwidth=110, anchor="w")
+            self.tree.column("claimant", width=130, minwidth=100, anchor="w")
+            self.tree.column("proof", width=240, minwidth=160, anchor="w")
+            self.tree.column("status", width=90, minwidth=80, anchor="center")
+            self.tree.column("submitted_at", width=100, minwidth=85, anchor="center")
         else:
             columns = ("claim_id", "item_title", "proof", "status", "submitted_at", "review_notes")
             self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse")
@@ -126,11 +143,19 @@ class ClaimsManagerFrame(ttk.Frame):
             )
             reject_btn.pack(side="left", padx=(0, 8))
 
+        receipt_btn = ttk.Button(
+            footer,
+            text="📄 Handover Receipt (PDF)",
+            style="Primary.TButton",
+            command=self._on_export_receipt
+        )
+        receipt_btn.pack(side="left", padx=(0, 8))
+
         refresh_btn = ttk.Button(footer, text="↻ Refresh", style="Secondary.TButton", command=self.refresh)
         refresh_btn.pack(side="left")
 
     def refresh(self) -> None:
-        """Load fresh claim data based on role."""
+        """Load fresh claim data based on role and filter."""
         for child in self.tree.get_children():
             self.tree.delete(child)
 
@@ -139,24 +164,56 @@ class ClaimsManagerFrame(ttk.Frame):
             self.count_lbl.configure(text="Sign in to view claims.")
             return
 
+        from database.repository import UserRepository
+        user_repo = UserRepository(self.db_path)
+
         if self.session.is_admin():
-            pending_claims = self.claim_service.list_pending_claims_for_review()
-            self.count_lbl.configure(text=f"{len(pending_claims)} claims pending verification")
-            for c in pending_claims:
-                self.tree.insert(
-                    "",
-                    "end",
-                    iid=str(c["claim_id"]),
-                    values=(
-                        f"#{c['claim_id']}",
-                        f"#{c['item_id']}",
-                        c["item_title"],
-                        f"{c['claimant_name']} ({c['claimant_email']})",
-                        c["proof_description"],
-                        c["submitted_at"][:10] if c.get("submitted_at") else ""
-                    ),
-                    tags=("PENDING",)
-                )
+            filt = getattr(self, "status_filter_var", None)
+            filter_mode = filt.get() if filt else "PENDING"
+
+            if filter_mode == "PENDING":
+                claims = self.claim_service.list_pending_claims_for_review()
+                self.count_lbl.configure(text=f"{len(claims)} pending verification")
+                for c in claims:
+                    self.tree.insert(
+                        "",
+                        "end",
+                        iid=str(c["claim_id"]),
+                        values=(
+                            f"#{c['claim_id']}",
+                            f"#{c['item_id']}",
+                            c["item_title"],
+                            f"{c['claimant_name']} ({c['claimant_email']})",
+                            c["proof_description"],
+                            "PENDING",
+                            c["submitted_at"][:10] if c.get("submitted_at") else ""
+                        ),
+                        tags=("PENDING",)
+                    )
+            else:
+                status_arg = "APPROVED" if filter_mode == "APPROVED" else None
+                all_claims = self.claim_repo.list_all(status=status_arg)
+                self.count_lbl.configure(text=f"{len(all_claims)} claims ({filter_mode})")
+                for c in all_claims:
+                    item = self.item_repo.get_by_id(c.item_id)
+                    claimant = user_repo.get_by_id(c.claimant_id)
+                    item_title = item.title if item else f"Item #{c.item_id}"
+                    claimant_str = f"{claimant.full_name} ({claimant.email})" if claimant else f"User #{c.claimant_id}"
+                    self.tree.insert(
+                        "",
+                        "end",
+                        iid=str(c.id),
+                        values=(
+                            f"#{c.id}",
+                            f"#{c.item_id}",
+                            item_title,
+                            claimant_str,
+                            c.proof_description,
+                            c.status,
+                            c.submitted_at[:10] if c.submitted_at else ""
+                        ),
+                        tags=(c.status,)
+                    )
         else:
             my_claims = self.claim_repo.list_by_claimant(user.id)
             self.count_lbl.configure(text=f"{len(my_claims)} total claims filed by you")
@@ -203,15 +260,18 @@ class ClaimsManagerFrame(ttk.Frame):
                 reviewer_id=reviewer_id,
                 verification_notes=notes or "Verified identity and ownership proof."
             )
-            messagebox.showinfo(
-                "Handover Recorded",
-                f"Claim #{claim_id} approved!\n"
-                f"The item has been marked as RETURNED and recorded in audit logs.",
-                parent=self
-            )
             self.refresh()
             if self.on_claim_updated:
                 self.on_claim_updated()
+
+            if messagebox.askyesno(
+                "Handover Recorded",
+                f"Claim #{claim_id} has been APPROVED!\n"
+                f"The item has been marked as RETURNED in the campus registry.\n\n"
+                f"Would you like to generate and view the Official PDF Handover Certificate now?",
+                parent=self
+            ):
+                self._generate_and_open_receipt(claim_id)
         except Exception as err:
             messagebox.showerror("Error", f"Failed to approve claim: {err}", parent=self)
 
@@ -246,3 +306,54 @@ class ClaimsManagerFrame(ttk.Frame):
                 self.on_claim_updated()
         except Exception as err:
             messagebox.showerror("Error", f"Failed to reject claim: {err}", parent=self)
+
+    def _on_export_receipt(self) -> None:
+        """Export official PDF handover certificate for selected claim."""
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showinfo("Select Claim", "Please select a claim from the table to export its receipt.", parent=self)
+            return
+
+        claim_id = int(selected[0])
+        claim = self.claim_repo.get_by_id(claim_id)
+        if not claim:
+            messagebox.showerror("Error", f"Claim #{claim_id} not found.", parent=self)
+            return
+
+        if claim.status != "APPROVED":
+            messagebox.showwarning(
+                "Not Approved",
+                f"Claim #{claim_id} is currently '{claim.status}'.\n"
+                f"Official Handover Certificates can only be generated for claims that have been verified and APPROVED.",
+                parent=self
+            )
+            return
+
+        self._generate_and_open_receipt(claim_id)
+
+    def _generate_and_open_receipt(self, claim_id: int) -> None:
+        """Prompt destination, generate receipt PDF, and open it."""
+        from tkinter import filedialog
+        from services.pdf_service import PDFService
+        default_name = f"handover_receipt_claim_{claim_id}.pdf"
+        target_path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Save Handover Certificate (PDF)",
+            defaultextension=".pdf",
+            initialfile=default_name,
+            filetypes=[("PDF Documents", "*.pdf")]
+        )
+        if not target_path:
+            return
+
+        try:
+            pdf_service = PDFService(self.db_path)
+            generated_path = pdf_service.generate_handover_receipt(claim_id=claim_id, output_path=target_path)
+            pdf_service.open_pdf(generated_path)
+            messagebox.showinfo(
+                "Receipt Exported",
+                f"Official Handover Certificate generated successfully at:\n{generated_path}",
+                parent=self
+            )
+        except Exception as err:
+            messagebox.showerror("Export Failed", f"Failed to generate handover receipt: {err}", parent=self)

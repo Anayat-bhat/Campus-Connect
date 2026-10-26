@@ -61,6 +61,14 @@ class AnalyticsFrame(ttk.Frame):
         actions = ttk.Frame(header, style="Card.TFrame")
         actions.pack(side="right")
 
+        export_audit_btn = ttk.Button(
+            actions,
+            text="📑 Export Audit Report (PDF)",
+            style="Primary.TButton",
+            command=self._on_export_audit_pdf
+        )
+        export_audit_btn.pack(side="left", padx=(0, 8))
+
         export_btn = ttk.Button(
             actions,
             text="📥 Export Chart",
@@ -208,6 +216,35 @@ class AnalyticsFrame(ttk.Frame):
                 messagebox.showinfo("Export Successful", f"Chart successfully saved to:\n{filepath}", parent=self)
             except Exception as e:
                 messagebox.showerror("Export Failed", f"Could not save chart: {e}", parent=self)
+
+    def _on_export_audit_pdf(self) -> None:
+        """Export comprehensive campus audit report as an official PDF."""
+        from datetime import datetime
+        default_file = f"campus_audit_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = filedialog.asksaveasfilename(
+            parent=self,
+            title="Save Campus Lost & Found Audit Report (PDF)",
+            defaultextension=".pdf",
+            initialfile=default_file,
+            filetypes=[("PDF Documents", "*.pdf")]
+        )
+        if not filepath:
+            return
+
+        try:
+            from services.pdf_service import PDFService
+            pdf_service = PDFService(self.db_path)
+            operator = self.session.current_user.full_name if self.session.current_user else "Administrator"
+            generated_path = pdf_service.generate_audit_report(output_path=filepath, operator_name=operator)
+
+            if messagebox.askyesno(
+                "Audit Report Generated",
+                f"Campus Audit Report successfully generated at:\n{generated_path}\n\nWould you like to open it now?",
+                parent=self
+            ):
+                pdf_service.open_pdf(generated_path)
+        except Exception as err:
+            messagebox.showerror("Export Failed", f"Failed to generate audit report: {err}", parent=self)
 
     def destroy(self) -> None:
         """Clean up Matplotlib figures when frame is destroyed."""

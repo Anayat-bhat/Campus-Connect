@@ -201,6 +201,21 @@ class ItemDetailsDialog(tk.Toplevel):
             )
             claim_btn.pack(side="left", padx=(0, 8))
 
+        # Handover Receipt button (if item has been returned and verified)
+        if self.item.status == "RETURNED":
+            from database.repository import ClaimRepository
+            claim_repo = ClaimRepository(self.db_path)
+            approved_claims = [c for c in claim_repo.list_by_item(self.item.id) if c.status == "APPROVED"]
+            if approved_claims:
+                approved_claim_id = approved_claims[0].id
+                receipt_btn = ttk.Button(
+                    action_bar,
+                    text="📄 Handover Receipt",
+                    style="Success.TButton",
+                    command=lambda cid=approved_claim_id: self._on_view_receipt(cid)
+                )
+                receipt_btn.pack(side="left", padx=(0, 8))
+
         # Smart Matches button (matches Lost items against Found or vice versa)
         match_btn = ttk.Button(
             action_bar,
@@ -248,3 +263,14 @@ class ItemDetailsDialog(tk.Toplevel):
             if self.on_delete_callback:
                 self.destroy()
                 self.on_delete_callback(self.item)
+
+    def _on_view_receipt(self, claim_id: int) -> None:
+        """Generate and display official handover certificate for returned item."""
+        from services.pdf_service import PDFService
+        try:
+            pdf_service = PDFService(self.db_path)
+            pdf_path = pdf_service.generate_handover_receipt(claim_id)
+            pdf_service.open_pdf(pdf_path)
+            messagebox.showinfo("Receipt Generated", f"Official Handover Certificate opened:\n{pdf_path}", parent=self)
+        except Exception as err:
+            messagebox.showerror("Error", f"Failed to generate receipt: {err}", parent=self)

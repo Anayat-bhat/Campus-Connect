@@ -57,3 +57,6 @@ $RECYCLE.BIN/
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Local Exported PDFs and Reports
+exports/
