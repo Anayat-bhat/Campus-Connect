@@ -35,19 +35,45 @@ class ReportItemFrame(ttk.Frame):
         self._build_ui()
 
     def _build_ui(self) -> None:
-        """Render the reporting form elements."""
-        # Outer card container
-        card = ttk.Frame(self, style="Card.TFrame", padding="24")
-        card.pack(fill="both", expand=True, padx=20, pady=20)
+        """Render the reporting form elements with full scrollability."""
+        # Scrollable canvas container
+        self.canvas = tk.Canvas(self, bg="#f8fafc", highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+
+        # Inner form card container
+        card = ttk.Frame(self.canvas, style="Card.TFrame", padding="20 16")
+
+        card.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        self.canvas_window = self.canvas.create_window((0, 0), window=card, anchor="nw")
+
+        def _on_canvas_configure(event):
+            self.canvas.itemconfig(self.canvas_window, width=event.width)
+
+        self.canvas.bind("<Configure>", _on_canvas_configure)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        def _on_mousewheel(event):
+            if self.canvas.winfo_exists():
+                self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        self.bind("<MouseWheel>", _on_mousewheel)
+        self.canvas.bind("<MouseWheel>", _on_mousewheel)
+        card.bind("<MouseWheel>", _on_mousewheel)
+
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
 
         # Title
         title_lbl = ttk.Label(
             card,
             text="📝 Report a Campus Item",
-            font=("Segoe UI", 16, "bold"),
+            font=("Segoe UI", 15, "bold"),
             background="#ffffff"
         )
-        title_lbl.pack(anchor="w", pady=(0, 4))
+        title_lbl.pack(anchor="w", pady=(0, 2))
 
         subtitle_lbl = ttk.Label(
             card,
@@ -56,7 +82,7 @@ class ReportItemFrame(ttk.Frame):
             foreground="#64748b",
             background="#ffffff"
         )
-        subtitle_lbl.pack(anchor="w", pady=(0, 20))
+        subtitle_lbl.pack(anchor="w", pady=(0, 12))
 
         # Grid form
         form_grid = ttk.Frame(card, style="Card.TFrame")
@@ -67,7 +93,7 @@ class ReportItemFrame(ttk.Frame):
 
         # Item Type (Radio buttons)
         ttk.Label(form_grid, text="Report Type *", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="w", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="w", pady=5, padx=(0, 16)
         )
         self.type_var = tk.StringVar(value="LOST")
         type_box = ttk.Frame(form_grid, style="Card.TFrame")
@@ -85,12 +111,12 @@ class ReportItemFrame(ttk.Frame):
         )
         self.title_var = tk.StringVar()
         self.title_entry = ttk.Entry(form_grid, textvariable=self.title_var, font=("Segoe UI", 10))
-        self.title_entry.grid(row=row, column=1, sticky="ew", pady=8)
+        self.title_entry.grid(row=row, column=1, sticky="ew", pady=5)
         row += 1
 
         # Category
         ttk.Label(form_grid, text="Category *", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="w", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="w", pady=5, padx=(0, 16)
         )
         self.category_var = tk.StringVar()
         self.category_cb = ttk.Combobox(
@@ -101,50 +127,50 @@ class ReportItemFrame(ttk.Frame):
             font=("Segoe UI", 10)
         )
         self.category_cb.set(sorted(list(VALID_CATEGORIES))[0])
-        self.category_cb.grid(row=row, column=1, sticky="ew", pady=8)
+        self.category_cb.grid(row=row, column=1, sticky="ew", pady=5)
         row += 1
 
         # Location
         ttk.Label(form_grid, text="Location *", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="w", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="w", pady=5, padx=(0, 16)
         )
         self.location_var = tk.StringVar()
         self.location_entry = ttk.Entry(form_grid, textvariable=self.location_var, font=("Segoe UI", 10))
-        self.location_entry.grid(row=row, column=1, sticky="ew", pady=8)
+        self.location_entry.grid(row=row, column=1, sticky="ew", pady=5)
         row += 1
 
         # Event Date
         ttk.Label(form_grid, text="Date (YYYY-MM-DD) *", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="w", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="w", pady=5, padx=(0, 16)
         )
         self.date_var = tk.StringVar(value=date.today().isoformat())
         self.date_entry = ttk.Entry(form_grid, textvariable=self.date_var, font=("Segoe UI", 10))
-        self.date_entry.grid(row=row, column=1, sticky="ew", pady=8)
+        self.date_entry.grid(row=row, column=1, sticky="ew", pady=5)
         row += 1
 
         # Description (Text Area)
         ttk.Label(form_grid, text="Detailed Description *", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="nw", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="nw", pady=5, padx=(0, 16)
         )
         self.desc_text = tk.Text(
             form_grid,
-            height=4,
+            height=3,
             wrap="word",
             font=("Segoe UI", 10),
             relief="solid",
             borderwidth=1,
             padx=8,
-            pady=8
+            pady=6
         )
-        self.desc_text.grid(row=row, column=1, sticky="ew", pady=8)
+        self.desc_text.grid(row=row, column=1, sticky="ew", pady=5)
         row += 1
 
         # Optional Image Upload & Preview Card
         ttk.Label(form_grid, text="Item Photo (Optional)", font=("Segoe UI", 10, "bold"), background="#ffffff").grid(
-            row=row, column=0, sticky="nw", pady=8, padx=(0, 16)
+            row=row, column=0, sticky="nw", pady=5, padx=(0, 16)
         )
         img_container = ttk.Frame(form_grid, style="Card.TFrame")
-        img_container.grid(row=row, column=1, sticky="ew", pady=8)
+        img_container.grid(row=row, column=1, sticky="ew", pady=5)
 
         img_actions = ttk.Frame(img_container, style="Card.TFrame")
         img_actions.pack(fill="x", anchor="w")
@@ -167,12 +193,12 @@ class ReportItemFrame(ttk.Frame):
             foreground="#64748b",
             background="#ffffff"
         )
-        self.thumbnail_preview_lbl.pack(anchor="w", pady=(8, 0))
+        self.thumbnail_preview_lbl.pack(anchor="w", pady=(6, 0))
         row += 1
 
         # Action Buttons
         btn_box = ttk.Frame(card, style="Card.TFrame")
-        btn_box.pack(anchor="w", pady=(24, 0))
+        btn_box.pack(anchor="w", pady=(14, 16))
 
         submit_btn = ttk.Button(
             btn_box,
@@ -189,6 +215,9 @@ class ReportItemFrame(ttk.Frame):
             command=self.reset_form
         )
         reset_btn.pack(side="left")
+
+        # Keyboard Shortcut: Ctrl+Enter triggers submit
+        self.bind_all("<Control-Return>", lambda _: self._on_submit())
 
     def _on_browse_image(self) -> None:
         """Open file dialog to pick an image and render live preview."""
