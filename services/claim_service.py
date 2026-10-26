@@ -177,13 +177,15 @@ class ClaimService:
         self,
         claim_id: int,
         reviewer_id: int,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
+        verification_notes: Optional[str] = None
     ) -> bool:
         """
         Reject an ownership claim:
         1. Set claim status to REJECTED.
         2. If no remaining PENDING claims exist for the item, revert item status to OPEN.
         """
+        decision_notes = verification_notes if verification_notes is not None else reason
         with get_db_cursor(self.db_path) as cursor:
             cursor.execute("SELECT id, item_id, status FROM claims WHERE id = ?", (claim_id,))
             claim_row = cursor.fetchone()
@@ -205,7 +207,7 @@ class ClaimService:
                     review_notes = ?
                 WHERE id = ?
                 """,
-                (reviewer_id, reason, claim_id)
+                (reviewer_id, decision_notes, claim_id)
             )
 
             # Check for remaining pending claims on this item
@@ -228,7 +230,7 @@ class ClaimService:
             claim = self.claim_repo.get_by_id(claim_id)
             item = self.item_repo.get_by_id(item_id)
             if claim and item:
-                self.notif_service.alert_claim_decision(claim, item, approved=False, notes=reason)
+                self.notif_service.alert_claim_decision(claim, item, approved=False, notes=decision_notes)
 
         return True
 

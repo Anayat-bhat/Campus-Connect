@@ -112,7 +112,7 @@ class CampusConnectApp {
   }
 
   // -------------------------------------------------------------
-  // User Authentication & Demo Switcher
+  // User Authentication, Profile & Registration Management
   // -------------------------------------------------------------
 
   async loadCurrentUser() {
@@ -121,21 +121,38 @@ class CampusConnectApp {
       const data = await res.json();
       if (data.authenticated && data.user) {
         this.currentUser = data.user;
-        this.renderUserUI();
+      } else {
+        this.currentUser = null;
       }
+      this.renderUserUI();
     } catch (err) {
       console.error('Failed to load current user:', err);
+      this.currentUser = null;
+      this.renderUserUI();
     }
   }
 
   renderUserUI() {
-    if (!this.currentUser) return;
-    
+    const chipEl = document.getElementById('userChipLoggedIn');
+    const loginBtnEl = document.getElementById('btnHeaderLogin');
     const nameEl = document.getElementById('userName');
     const roleBadgeEl = document.getElementById('userRoleBadge');
     const avatarEl = document.getElementById('userAvatar');
     const adminNoticeEl = document.getElementById('adminBadgeNotice');
     const claimsDescEl = document.getElementById('claimsPaneDesc');
+
+    if (!this.currentUser) {
+      if (chipEl) chipEl.style.display = 'none';
+      if (loginBtnEl) loginBtnEl.style.display = 'inline-flex';
+      if (adminNoticeEl) adminNoticeEl.style.display = 'none';
+      if (claimsDescEl) {
+        claimsDescEl.textContent = 'Please sign in to submit and track ownership claims.';
+      }
+      return;
+    }
+
+    if (chipEl) chipEl.style.display = 'flex';
+    if (loginBtnEl) loginBtnEl.style.display = 'none';
 
     if (nameEl) nameEl.textContent = this.currentUser.full_name;
     if (roleBadgeEl) roleBadgeEl.textContent = this.currentUser.role.toUpperCase();
@@ -147,6 +164,247 @@ class CampusConnectApp {
       claimsDescEl.textContent = isAdmin
         ? 'Admin Verification Queue: Inspect submitted proof descriptions and authorize property handovers.'
         : 'Track the verification status of your submitted ownership claims and pickup instructions.';
+    }
+  }
+
+  openAccountMenuModal() {
+    if (!this.currentUser) {
+      this.openAuthModal('login');
+      return;
+    }
+
+    const avatarEl = document.getElementById('accountProfileAvatar');
+    const nameEl = document.getElementById('accountProfileName');
+    const usernameEl = document.getElementById('accountProfileUsername');
+    const roleEl = document.getElementById('accountProfileRole');
+    const emailEl = document.getElementById('accountProfileEmail');
+
+    if (avatarEl) avatarEl.textContent = this.currentUser.full_name.charAt(0).toUpperCase();
+    if (nameEl) nameEl.textContent = this.currentUser.full_name;
+    if (usernameEl) usernameEl.textContent = `@${this.currentUser.username}`;
+    if (emailEl) emailEl.textContent = this.currentUser.email;
+    if (roleEl) {
+      roleEl.textContent = this.currentUser.role.toUpperCase();
+      roleEl.className = `badge ${this.currentUser.role === 'admin' ? 'badge-admin' : 'badge-student'}`;
+    }
+
+    this.openModal('accountMenuModal');
+  }
+
+  openAuthModal(defaultTab = 'login') {
+    this.closeModal('accountMenuModal');
+    this.switchAuthTab(defaultTab);
+
+    // Reset error banners
+    const loginErr = document.getElementById('loginErrorBox');
+    const regErr = document.getElementById('regErrorBox');
+    if (loginErr) { loginErr.style.display = 'none'; loginErr.textContent = ''; }
+    if (regErr) { regErr.style.display = 'none'; regErr.textContent = ''; }
+
+    this.openModal('authModal');
+  }
+
+  switchAuthTab(tab) {
+    const tabSignIn = document.getElementById('tabBtnSignIn');
+    const tabRegister = document.getElementById('tabBtnRegister');
+    const panelLogin = document.getElementById('authPanelLogin');
+    const panelRegister = document.getElementById('authPanelRegister');
+
+    if (tab === 'login') {
+      if (tabSignIn) tabSignIn.classList.add('active');
+      if (tabRegister) tabRegister.classList.remove('active');
+      if (panelLogin) panelLogin.style.display = 'block';
+      if (panelRegister) panelRegister.style.display = 'none';
+    } else {
+      if (tabSignIn) tabSignIn.classList.remove('active');
+      if (tabRegister) tabRegister.classList.add('active');
+      if (panelLogin) panelLogin.style.display = 'none';
+      if (panelRegister) panelRegister.style.display = 'block';
+    }
+  }
+
+  togglePasswordVisibility(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+
+    if (btnEl) {
+      btnEl.innerHTML = isPassword
+        ? `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`
+        : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    }
+  }
+
+  quickFillLogin(username, password) {
+    const userField = document.getElementById('loginUsername');
+    const pwdField = document.getElementById('loginPassword');
+    const errBox = document.getElementById('loginErrorBox');
+    if (userField) userField.value = username;
+    if (pwdField) pwdField.value = password;
+    if (errBox) errBox.style.display = 'none';
+  }
+
+  async handleLoginSubmit(e) {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername')?.value.trim();
+    const password = document.getElementById('loginPassword')?.value;
+    const errBox = document.getElementById('loginErrorBox');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+
+    if (!username || !password) {
+      if (errBox) {
+        errBox.textContent = 'Please enter your username/email and password.';
+        errBox.style.display = 'flex';
+      }
+      return;
+    }
+
+    if (errBox) errBox.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Signing in...</span>';
+    }
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (errBox) {
+          errBox.textContent = data.error || 'Invalid credentials. Please verify your login details.';
+          errBox.style.display = 'flex';
+        }
+        return;
+      }
+
+      this.currentUser = data.user;
+      this.renderUserUI();
+      this.closeModal('authModal');
+      this.showToast(data.message || `Welcome back, ${data.user.full_name}!`, 'success');
+
+      // Refresh data for authenticated user
+      await this.loadItems();
+      this.updateNotificationBadge();
+      if (this.activeTab === 'claims') this.loadClaims();
+      if (this.activeTab === 'my-items') this.loadMyItems();
+
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = 'Connection error. Please check server availability.';
+        errBox.style.display = 'flex';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Sign In to CampusConnect</span>';
+      }
+    }
+  }
+
+  async handleRegisterSubmit(e) {
+    e.preventDefault();
+    const fullName = document.getElementById('regFullName')?.value.trim();
+    const username = document.getElementById('regUsername')?.value.trim();
+    const email = document.getElementById('regEmail')?.value.trim();
+    const role = document.querySelector('input[name="regRole"]:checked')?.value || 'student';
+    const password = document.getElementById('regPassword')?.value;
+    const confirmPassword = document.getElementById('regConfirmPassword')?.value;
+    const errBox = document.getElementById('regErrorBox');
+    const submitBtn = document.getElementById('regSubmitBtn');
+
+    if (!fullName || !username || !email || !password) {
+      if (errBox) {
+        errBox.textContent = 'Please fill in all required fields.';
+        errBox.style.display = 'flex';
+      }
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      if (errBox) {
+        errBox.textContent = 'Passwords do not match. Please verify both password fields.';
+        errBox.style.display = 'flex';
+      }
+      return;
+    }
+
+    if (password.length < 6) {
+      if (errBox) {
+        errBox.textContent = 'Password must be at least 6 characters long.';
+        errBox.style.display = 'flex';
+      }
+      return;
+    }
+
+    if (errBox) errBox.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Creating Account...</span>';
+    }
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: fullName,
+          username,
+          email,
+          role,
+          password
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (errBox) {
+          errBox.textContent = data.error || 'Failed to create account. Please check inputs.';
+          errBox.style.display = 'flex';
+        }
+        return;
+      }
+
+      this.currentUser = data.user;
+      this.renderUserUI();
+      this.closeModal('authModal');
+      this.showToast(data.message || `Welcome to CampusConnect, ${data.user.full_name}!`, 'success');
+
+      // Reload demo users list so this new profile appears in switcher too
+      await this.loadDemoUsers();
+      await this.loadItems();
+      this.updateNotificationBadge();
+
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = 'Network or server error during registration.';
+        errBox.style.display = 'flex';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>✨ Create Account & Sign In</span>';
+      }
+    }
+  }
+
+  async handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      this.currentUser = null;
+      this.renderUserUI();
+      this.closeModal('accountMenuModal');
+      this.showToast('You have been logged out.', 'info');
+      this.updateNotificationBadge();
+      
+      // Open auth modal for easy login or account creation
+      this.openAuthModal('login');
+    } catch (err) {
+      this.showToast('Error during logout', 'error');
     }
   }
 
@@ -315,10 +573,13 @@ class CampusConnectApp {
            </div>`
         : '';
 
+      const isOwner = this.currentUser && it.user_id === this.currentUser.id;
       const claimActionBtn = (!isLost && it.status === 'OPEN')
-        ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); app.openClaimModal(${it.id})">
-             ✋ Claim Item
-           </button>`
+        ? (isOwner
+            ? `<span class="badge" style="background: rgba(162, 23, 33, 0.08); color: var(--primary); font-size: 0.72rem;">Your Report</span>`
+            : `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); app.openClaimModal(${it.id})">
+                 ✋ Claim Item
+               </button>`)
         : '';
 
       return `
@@ -455,7 +716,8 @@ class CampusConnectApp {
            </div>`
         : '';
 
-      const claimBtnHtml = (!isLost && it.status === 'OPEN')
+      const isOwner = this.currentUser && it.user_id === this.currentUser.id;
+      const claimBtnHtml = (!isLost && it.status === 'OPEN' && !isOwner)
         ? `<button class="btn btn-primary" onclick="app.closeModal('itemDetailsModal'); app.openClaimModal(${it.id})">
              ✋ Claim Item Ownership
            </button>`
@@ -611,13 +873,13 @@ class CampusConnectApp {
       area.innerHTML = `
         <div style="margin-bottom: 16px;">
           <span class="text-muted text-sm">Found <strong>${matches.length}</strong> counterpart candidates for:</span>
-          <h3 style="color: #818cf8; font-size: 1.15rem; margin-top: 2px;">${source.type} #${source.id}: ${source.title}</h3>
+          <h3 style="color: var(--primary); font-size: 1.15rem; margin-top: 2px;">${source.type} #${source.id}: ${source.title}</h3>
         </div>
         <div class="match-results-grid">
           ${matches.map(m => {
             const target = m.target_item;
-            const isFoundTarget = target.type === 'FOUND';
-            const claimBtn = isFoundTarget
+            const isTargetOwner = this.currentUser && target.user_id === this.currentUser.id;
+            const claimBtn = (isFoundTarget && !isTargetOwner)
               ? `<button class="btn btn-sm btn-primary" onclick="app.openClaimModal(${target.id})">✋ Claim</button>`
               : '';
 
@@ -873,8 +1135,22 @@ class CampusConnectApp {
   }
 
   openClaimModal(itemId) {
-    const item = this.items.find(i => i.id === itemId);
-    if (!item) return;
+    if (!this.currentUser) {
+      this.showToast('Please sign in or create an account to claim this item.', 'info');
+      this.openAuthModal('login');
+      return;
+    }
+
+    const item = this.items.find(i => i.id == itemId);
+    if (!item) {
+      this.showToast('Item not found', 'error');
+      return;
+    }
+
+    if (item.user_id === this.currentUser.id) {
+      this.showToast('You cannot submit an ownership claim on an item you reported as found.', 'warning');
+      return;
+    }
 
     const idInput = document.getElementById('claimItemId');
     const titleEl = document.getElementById('claimItemTitle');
@@ -889,28 +1165,57 @@ class CampusConnectApp {
 
   async handleClaimSubmit(e) {
     e.preventDefault();
-    const itemId = document.getElementById('claimItemId').value;
-    const proof = document.getElementById('claimProofText').value.trim();
+    const itemId = document.getElementById('claimItemId')?.value;
+    const proof = document.getElementById('claimProofText')?.value.trim();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    if (!itemId) {
+      this.showToast('Invalid item selection.', 'error');
+      return;
+    }
+
+    if (!proof || proof.length < 5) {
+      this.showToast('Please provide at least 5 characters of distinguishing proof.', 'warning');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting Claim...';
+    }
 
     try {
       const res = await fetch('/api/claims', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: itemId, proof_description: proof })
+        body: JSON.stringify({ item_id: parseInt(itemId, 10), proof_description: proof })
       });
-      const data = await res.json();
 
-      if (data.success) {
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = null;
+      }
+
+      if (res.ok && data && data.success) {
         this.closeModal('claimModal');
-        this.showToast(data.message, 'success');
-        document.getElementById('claimSubmitForm').reset();
+        this.showToast(data.message || 'Claim submitted successfully!', 'success');
+        document.getElementById('claimSubmitForm')?.reset();
         await this.loadItems();
         if (this.activeTab === 'claims') this.loadClaims();
       } else {
-        this.showToast(data.error || 'Failed to submit claim', 'error');
+        const errorMsg = data?.error || (res.status === 401 ? 'Please sign in to submit a claim.' : `Claim failed (${res.status})`);
+        this.showToast(errorMsg, 'error');
       }
     } catch (err) {
-      this.showToast('Network error submitting claim', 'error');
+      console.error('Claim submission error:', err);
+      this.showToast(err.message || 'Connection error submitting claim. Please check server status.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Ownership Claim';
+      }
     }
   }
 
@@ -959,18 +1264,18 @@ class CampusConnectApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: action, notes: notes })
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
-      if (data.success) {
+      if (res.ok && data && data.success) {
         this.closeModal('reviewClaimModal');
-        this.showToast(data.message, 'success');
+        this.showToast(data.message || `Claim ${action}ed successfully.`, 'success');
         await this.loadClaims();
         await this.loadItems();
       } else {
-        this.showToast(data.error || 'Failed to review claim', 'error');
+        this.showToast(data?.error || `Failed to ${action} claim (${res.status})`, 'error');
       }
     } catch (err) {
-      this.showToast('Network error reviewing claim', 'error');
+      this.showToast(err.message || 'Connection error reviewing claim', 'error');
     }
   }
 

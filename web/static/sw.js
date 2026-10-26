@@ -1,10 +1,10 @@
 // CampusConnect Service Worker
-const CACHE_NAME = 'campusconnect-v1';
+const CACHE_NAME = 'campusconnect-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/static/css/style.css',
-  '/static/js/app.js',
+  '/static/css/style.css?v=2.2',
+  '/static/js/app.js?v=2.2',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png'
 ];
@@ -32,14 +32,15 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Let API requests pass directly with network-first
+  // API requests go directly to network
   if (e.request.url.includes('/api/') || e.request.method !== 'GET') {
     return;
   }
 
+  // Network-First with Cache Fallback
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request).then((networkResponse) => {
+    fetch(e.request)
+      .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -47,9 +48,7 @@ self.addEventListener('fetch', (e) => {
           });
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(e.request))
   );
 });

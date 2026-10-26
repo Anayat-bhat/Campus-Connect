@@ -30,7 +30,7 @@ from database.repository import (
 from models.user import User
 from models.item import Item
 from models.claim import Claim
-from services.auth_service import AuthService, AuthenticationError
+from services.auth_service import AuthService, AuthenticationError, RegistrationError
 from services.claim_service import ClaimService, ClaimWorkflowError
 from services.matching_service import MatchingService
 from services.notification_service import NotificationService
@@ -136,16 +136,6 @@ def serialize_item(item: Item, viewer_id: Optional[int] = None) -> Dict[str, Any
 @app.route("/")
 def index():
     """Serve main Single Page Application."""
-    # Ensure a default session user exists for immediate exploration (default: Rohit Kumar)
-    if "user_id" not in session:
-        default_user = user_repo.get_by_username("rohit_kumar")
-        if not default_user:
-            default_user = user_repo.get_by_username("admin")
-        if default_user:
-            session["user_id"] = default_user.id
-            session["username"] = default_user.username
-            session["role"] = default_user.role
-
     return render_template("index.html")
 
 
@@ -242,10 +232,15 @@ def api_auth_switch():
 
 @app.route("/api/auth/login", methods=["POST"])
 def api_auth_login():
-    """Authenticate with username and password."""
+    """Authenticate with username or email and password."""
     data = request.get_json() or {}
     username = data.get("username", "").strip()
     password = data.get("password", "")
+
+    if not username:
+        return jsonify({"success": False, "error": "Username or campus email is required."}), 400
+    if not password:
+        return jsonify({"success": False, "error": "Password is required."}), 400
 
     try:
         user = auth_service.authenticate(username, password)
@@ -256,6 +251,7 @@ def api_auth_login():
         unread = notif_service.list_user_notifications(user.id, unread_only=True)
         return jsonify({
             "success": True,
+            "message": f"Welcome back, {user.full_name}!",
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -269,11 +265,62 @@ def api_auth_login():
         return jsonify({"success": False, "error": str(e)}), 401
 
 
+@app.route("/api/auth/register", methods=["POST"])
+def api_auth_register():
+    """Register a new student or admin account and authenticate them."""
+    data = request.get_json() or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+    full_name = data.get("full_name", "").strip()
+    email = data.get("email", "").strip()
+    role = data.get("role", "student").strip().lower()
+    if role not in ("student", "admin"):
+        role = "student"
+
+    if not full_name:
+        return jsonify({"success": False, "error": "Full name is required."}), 400
+    if not username:
+        return jsonify({"success": False, "error": "Username is required (min 3 alphanumeric characters)."}), 400
+    if not email:
+        return jsonify({"success": False, "error": "Valid campus email is required."}), 400
+    if not password:
+        return jsonify({"success": False, "error": "Password is required (min 6 characters)."}), 400
+
+    try:
+        new_user = auth_service.register_user(
+            username=username,
+            password=password,
+            full_name=full_name,
+            email=email,
+            role=role
+        )
+        session["user_id"] = new_user.id
+        session["username"] = new_user.username
+        session["role"] = new_user.role
+
+        return jsonify({
+            "success": True,
+            "message": f"Account created! Welcome to CampusConnect, {new_user.full_name}.",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "full_name": new_user.full_name,
+                "email": new_user.email,
+                "role": new_user.role,
+                "unread_count": 0
+            }
+        }), 201
+    except (RegistrationError, ValueError) as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Registration failed: {str(e)}"}), 500
+
+
 @app.route("/api/auth/logout", methods=["POST"])
 def api_auth_logout():
     """Clear session."""
     session.clear()
-    return jsonify({"success": True})
+    return jsonify({"success": True, "message": "Successfully logged out."})
 
 
 # ---------------------------------------------------------
@@ -443,8 +490,11 @@ def api_delete_item(user: User, item_id: int):
     if item.user_id != user.id and user.role != "admin":
         return jsonify({"success": False, "error": "You do not have permission to delete this report."}), 403
 
-    item_repo.delete(item_id)
-    return jsonify({"success": True, "message": f"Item #{item_id} deleted successfully."})
+    try:
+        item_repo.delete(item_id)
+        return jsonify({"success": True, "message": f"Item #{item_id} deleted successfully."})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
 
 
 # ---------------------------------------------------------
@@ -485,11 +535,13 @@ def api_item_matches(item_id: int):
                 "owner_name": owner.full_name if owner else "Anonymous"
             },
             "overall_score": round(m.overall_score, 1),
-            "category_score": round(m.category_score, 1),
-            "keyword_score": round(m.keyword_score, 1),
-            "location_score": round(m.location_score, 1),
-            "date_score": round(m.date_score, 1),
-            "explanation": m.explanation
+            "category_score": round(m.category_score * 100, 1),
+            "keyword_score": round(m.text_score * 100, 1),
+            "text_score": round(m.text_score * 100, 1),
+            "location_score": round(m.location_score * 100, 1),
+            "date_score": round(m.date_score * 100, 1),
+            "explanation": m.explanation,
+            "reasons": m.reasons if hasattr(m, "reasons") else []
         })
 
     return jsonify({
@@ -511,12 +563,11 @@ def api_list_claims(user: User):
     status_filter = request.args.get("status")
     
     if user.role == "admin":
-        if status_filter:
-            claims = claim_repo.list_by_status(status_filter)
-        else:
-            claims = claim_repo.list_all()
+        claims = claim_repo.list_all(status=status_filter)
     else:
-        claims = claim_service.list_user_claims(user.id)
+        claims = claim_repo.list_by_claimant(user.id)
+        if status_filter:
+            claims = [c for c in claims if c.status == status_filter]
 
     serialized = []
     for c in claims:
@@ -536,9 +587,9 @@ def api_list_claims(user: User):
             "claimant_email": claimant.email if claimant else "",
             "proof_description": c.proof_description,
             "status": c.status,
-            "verification_notes": c.verification_notes,
+            "verification_notes": getattr(c, "review_notes", "") or getattr(c, "verification_notes", "") or "",
             "reviewed_by_name": reviewer.full_name if reviewer else None,
-            "created_at": c.created_at,
+            "created_at": getattr(c, "submitted_at", "") or getattr(c, "created_at", "") or "",
             "reviewed_at": c.reviewed_at
         })
 
@@ -595,6 +646,7 @@ def api_review_claim(admin_user: User, claim_id: int):
             claim_service.reject_claim(
                 claim_id=claim_id,
                 reviewer_id=admin_user.id,
+                reason=notes or "Proof description did not sufficiently match item distinguishing features.",
                 verification_notes=notes or "Proof description did not sufficiently match item distinguishing features."
             )
             return jsonify({"success": True, "message": "Claim rejected. Item restored to OPEN status and claimant notified."})
@@ -602,6 +654,8 @@ def api_review_claim(admin_user: User, claim_id: int):
             return jsonify({"success": False, "error": "Action must be 'approve' or 'reject'"}), 400
     except (ValueError, ClaimWorkflowError) as e:
         return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to process claim review: {str(e)}"}), 500
 
 
 # ---------------------------------------------------------
