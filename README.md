@@ -12,7 +12,8 @@
    - [Phase 1: Project Setup & Environment Verification](#phase-1-project-setup--environment-verification)
    - [Phase 2: Relational Database Design & SQLite Schema](#phase-2-relational-database-design--sqlite-schema)
    - [Phase 3: Domain Models & Repository CRUD Layer](#phase-3-domain-models--repository-crud-layer)
-   - [Upcoming Phases (Phase 4 – Phase 10)](#upcoming-phases-phase-4--phase-10)
+   - [Phase 12: Image & Photo Attachment System](#phase-12-image--photo-attachment-system)
+   - [Phase 13: Official PDF Handover Receipt & Campus Audit Report Generator](#phase-13-official-pdf-handover-receipt--campus-audit-report-generator)
 5. [Installation & Quick Start](#-installation--quick-start)
 6. [Automated Testing Suite](#-automated-testing-suite)
 7. [Directory Structure](#-directory-structure)
@@ -336,6 +337,46 @@ CampusConnect follows a **4-Tier Layered Architecture** with strict **Separation
 
 ---
 
+### Phase 13: Official PDF Handover Receipt & Campus Audit Report Generator
+- **Objectives**: Design and implement an institutional-grade PDF generation engine capable of producing printable, tamper-evident Handover Certificates for claimed belongings and comprehensive Campus Lost & Found Audit and Recovery Reports for administrative review.
+- **Components Built**:
+  - `services/pdf_service.py`:
+    - `NumberedCanvas`: Dynamic two-pass ReportLab canvas dynamically stamping total page count ("Page X of Y") and institutional footer security markings.
+    - `generate_handover_receipt(claim_id, output_path)`:
+      - Validates that the referenced claim is strictly `APPROVED` before issuing a legal receipt.
+      - Deep Navy branding banner: *"Department of Campus Safety, Security & Student Affairs • Lost & Found Dispatch"*.
+      - Computes cryptographic SHA-256 verification hash and unique certificate serial number (`CC-REC-XXXX-YYYYMM`).
+      - Full Property Specifications block with item metadata, location, description, and embedded aspect-scaled photograph thumbnail.
+      - Claimant & Administrative verification audit trail including private proof notes and inspection sign-off.
+      - Legal declaration and campus custody release undertaking.
+      - Dual signature blocks (Claimant signature and Authorizing Officer signature with official university seal placeholder).
+    - `generate_audit_report(output_path, operator_name)`:
+      - Executive KPI summary cards (Total Logged, Lost Incidents, Found Belongings, Successfully Returned, Recovery Rate %).
+      - Side-by-side incident category breakdown table and campus location hotspot rankings.
+      - Comprehensive asset inventory log with color-coded status badges and resolution dates.
+      - Administrative auditing certification and official security directorate sign-off block.
+    - `open_pdf(filepath)`: Cross-platform launcher automatically opening generated PDFs in system default viewers (`os.startfile` on Windows).
+  - `gui/claims_manager_frame.py`:
+    - Added status filter dropdown (`PENDING`, `APPROVED`, `ALL`) allowing administrators to review historical returns.
+    - Automated prompt on claim approval: asks the administrator if they want to instantly generate and view the Official Handover Receipt.
+    - Dedicated "📄 Handover Receipt (PDF)" export button for administrators and students.
+  - `gui/analytics_frame.py`:
+    - Added "📑 Export Audit Report (PDF)" button in the dashboard header actions, allowing one-click compilation and viewing of full campus audit intelligence reports.
+  - `gui/item_details_dialog.py`:
+    - Integrated "📄 Handover Receipt" button for any verified `RETURNED` item with an approved claim.
+  - `requirements.txt`: Added `reportlab>=4.0.0`.
+  - `.gitignore`: Added `exports/` directory to prevent committing generated local test receipts.
+- **Files Created / Updated**:
+  - `services/pdf_service.py`: Complete ReportLab PDF generation service.
+  - `services/__init__.py`: Exported `PDFService`.
+  - `gui/claims_manager_frame.py`: Filter queue, approval receipt prompt, and export handler.
+  - `gui/analytics_frame.py`: Added audit report PDF export button.
+  - `gui/item_details_dialog.py`: Integrated handover receipt viewer.
+  - `tests/test_pdf_service.py`: 6 automated tests validating receipt generation, rejection of unapproved claims, embedded photo rendering, audit report compilation, and viewer invocation.
+- **Acceptance Criteria**: Official PDF receipts generated with accurate verification metadata, signatures, and embedded photos; audit report exports seamlessly; 92/92 tests pass.
+
+---
+
 ## 🏛️ System Architecture
 
 CampusConnect follows a strict **4-Tier Layered Architecture**:
@@ -362,6 +403,7 @@ graph TD
         N[services/claim_service.py: ACID Claim Handover Workflow]
         O[analytics/metrics.py: Pandas Aggregation Engine]
         P[analytics/chart_builder.py: Matplotlib Figures]
+        W[services/pdf_service.py: ReportLab Document Engine]
     end
 
     subgraph Domain_Tier ["3. Domain Entity Tier (Models)"]
@@ -536,7 +578,7 @@ python -m unittest discover tests
 
 #### Current Test Results:
 ```text
-Ran 86 tests in 14.172s
+Ran 92 tests in 36.505s
 OK
 ```
 
@@ -550,8 +592,8 @@ Campus-Connect/
 ├── main.py                     # Primary execution entry point & view controller
 ├── seed_demo_data.py           # Demonstration database seeder for viva presentation
 ├── run.bat                     # Windows one-click startup launcher
-├── requirements.txt            # Python dependencies (Matplotlib, Pandas, Pillow)
-├── .gitignore                  # Git ignore rules
+├── requirements.txt            # Python dependencies (Matplotlib, Pandas, Pillow, ReportLab)
+├── .gitignore                  # Git ignore rules (ignoring .db, exports/, and uploads)
 ├── README.md                   # Comprehensive phase-wise project manual & viva guide
 │
 ├── database/                   # Database persistence tier
@@ -574,7 +616,8 @@ Campus-Connect/
 │   ├── matching_service.py     # Explainable multi-factor Lost/Found matcher
 │   ├── claim_service.py        # Claim submission, ACID review & handover records
 │   ├── notification_service.py # In-app notification center & smart match auto-alerts
-│   └── image_service.py        # Secure photo uploads, size limits, & thumbnail scaling
+│   ├── image_service.py        # Secure photo uploads, size limits, & thumbnail scaling
+│   └── pdf_service.py          # ReportLab official handover receipts & campus audit reports
 │
 ├── gui/                        # Presentation UI tier
 │   ├── __init__.py
@@ -587,9 +630,9 @@ Campus-Connect/
 │   ├── item_details_dialog.py  # Modal item inspection, photo preview & ImageViewerDialog
 │   ├── match_dialog.py         # Algorithmic match viewer with explanation breakdown
 │   ├── claim_dialog.py         # Ownership proof submission modal
-│   ├── claims_manager_frame.py # Claims queue and status tracker
+│   ├── claims_manager_frame.py # Claims queue, status filter, & PDF handover receipt exporter
 │   ├── notification_dialog.py  # In-app notification center modal with filter & inspect
-│   └── analytics_frame.py      # Embedded Matplotlib KPI dashboard & chart exporter
+│   └── analytics_frame.py      # Embedded Matplotlib KPI dashboard & PDF audit report exporter
 │
 ├── analytics/                  # Matplotlib & Pandas reporting
 │   ├── __init__.py
@@ -609,7 +652,8 @@ Campus-Connect/
 │   ├── test_analytics.py       # DataFrame KPIs & Matplotlib chart generation (6 tests)
 │   ├── test_integration.py     # E2E lifecycle & security resilience tests (3 tests)
 │   ├── test_notifications.py   # Notification center & match auto-alerts (11 tests)
-│   └── test_image_service.py   # Photo validation, upload storage & zoom modal (9 tests)
+│   ├── test_image_service.py   # Photo validation, upload storage & zoom modal (9 tests)
+│   └── test_pdf_service.py     # PDF handover receipts & campus audit reports (6 tests)
 │
 ├── data/                       # Local persistent storage (gitignored .db)
 │   └── .gitkeep
@@ -618,4 +662,5 @@ Campus-Connect/
     ├── .gitkeep
     └── uploads/                # User photo uploads (secured with unique UUID names)
 ```
+
 
