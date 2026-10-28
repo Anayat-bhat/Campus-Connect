@@ -894,7 +894,8 @@ class CampusConnectApp {
           ${matches.map(m => {
             const target = m.target_item;
             const isTargetOwner = this.currentUser && target.user_id === this.currentUser.id;
-            const claimBtn = (isFoundTarget && !isTargetOwner)
+            const isFoundTarget = target.type === 'FOUND';
+            const claimBtn = (isFoundTarget && !isTargetOwner && target.status !== 'RESOLVED' && target.status !== 'RETURNED')
               ? `<button class="btn btn-sm btn-primary" onclick="app.openClaimModal(${target.id})">✋ Claim</button>`
               : '';
 
@@ -947,7 +948,8 @@ class CampusConnectApp {
         </div>
       `;
     } catch (err) {
-      area.innerHTML = `<div class="empty-state"><h3>Network error</h3><p>Could not load matches.</p></div>`;
+      console.error('Error loading matches:', err);
+      area.innerHTML = `<div class="empty-state"><h3>Network error</h3><p>Could not load matches: ${err.message || ''}</p></div>`;
     }
   }
 
@@ -967,29 +969,77 @@ class CampusConnectApp {
     if (input) input.value = loc;
   }
 
+  compressImageFile(file, maxDimension = 1600, quality = 0.85, callback) {
+    const reader = new FileReader();
+    reader.onerror = () => {
+      this.showToast('Could not read image file', 'error');
+    };
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => {
+        // Fallback to original data URL if image decoding fails
+        callback(e.target.result);
+      };
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        callback(compressed);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   handlePhotoSelect(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      this.showToast('Photo size exceeds 10MB limit', 'error');
+    if (file.size > 25 * 1024 * 1024) {
+      this.showToast('Photo size exceeds 25MB limit', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.selectedPhotoBase64 = e.target.result;
-      const preview = document.getElementById('dropzonePreview');
-      const content = document.getElementById('dropzoneContent');
-      const previewImg = document.getElementById('previewImg');
+    const preview = document.getElementById('dropzonePreview');
+    const content = document.getElementById('dropzoneContent');
+    const previewImg = document.getElementById('previewImg');
+
+    if (content) {
+      content.innerHTML = `<div style="padding: 12px; font-weight: 500; color: var(--primary);">⏳ Optimizing image for instant upload...</div>`;
+    }
+
+    // Automatically resize and optimize on-device for lightning-fast submission
+    this.compressImageFile(file, 1600, 0.85, (compressedBase64) => {
+      this.selectedPhotoBase64 = compressedBase64;
 
       if (preview && content && previewImg) {
         previewImg.src = this.selectedPhotoBase64;
         preview.style.display = 'block';
         content.style.display = 'none';
+        content.innerHTML = `
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          <p class="dropzone-text">Tap to take a photo or select from library</p>
+          <span class="dropzone-sub">PNG, JPG up to 25MB</span>
+        `;
       }
-    };
-    reader.readAsDataURL(file);
+    });
   }
 
   removePhoto() {
@@ -1008,7 +1058,10 @@ class CampusConnectApp {
   async handleReportSubmit(e) {
     e.preventDefault();
     const btn = document.getElementById('submitReportBtn');
-    if (btn) btn.disabled = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Submitting Report...';
+    }
 
     const reportType = document.querySelector('input[name="report_type"]:checked').value;
     const title = document.getElementById('reportTitle').value.trim();
@@ -1016,6 +1069,23 @@ class CampusConnectApp {
     const eventDate = document.getElementById('reportDate').value;
     const location = document.getElementById('reportLocation').value.trim();
     const description = document.getElementById('reportDesc').value.trim();
+
+    // Client-side validation matching backend rules
+    if (!title || title.length < 2) {
+      this.showToast('Please provide an item title (at least 2 characters)', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Submit Report & Trigger Smart Match'; }
+      return;
+    }
+    if (!description || description.length < 5) {
+      this.showToast('Please provide a description (at least 5 characters)', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Submit Report & Trigger Smart Match'; }
+      return;
+    }
+    if (!location || location.length < 2) {
+      this.showToast('Please specify campus location (at least 2 characters)', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Submit Report & Trigger Smart Match'; }
+      return;
+    }
 
     const payload = {
       type: reportType,
@@ -1033,7 +1103,13 @@ class CampusConnectApp {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        throw new Error(`Server returned status ${res.status}: ${res.statusText || 'Unable to parse server response'}`);
+      }
 
       if (data.success) {
         this.showToast(data.message, 'success');
@@ -1053,9 +1129,13 @@ class CampusConnectApp {
         this.showToast(data.error || 'Failed to submit report', 'error');
       }
     } catch (err) {
-      this.showToast('Network error submitting report', 'error');
+      console.error('Report submission error:', err);
+      this.showToast(err.message || 'Network error submitting report', 'error');
     } finally {
-      if (btn) btn.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = 'Submit Report & Trigger Smart Match';
+      }
     }
   }
 

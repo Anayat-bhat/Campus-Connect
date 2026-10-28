@@ -204,7 +204,7 @@ class MatchingService:
         # 3. Location Proximity
         loc_score, shared_loc_words = self.calculate_location_similarity(source.location, candidate.location)
         if loc_score >= 0.8:
-            reasons.append(f"High location match: '{source.location}' ≈ '{candidate.location}'")
+            reasons.append(f"High location match: '{source.location}' matched '{candidate.location}'")
         elif loc_score > 0.3:
             reasons.append(f"Partial location match: '{source.location}' and '{candidate.location}'")
         else:
@@ -260,12 +260,12 @@ class MatchingService:
         """
         counterpart_type = "FOUND" if item.type == "LOST" else "LOST"
 
-        # Query candidates from repository
-        candidates = self.item_repo.list_items(
+        # Query active candidates from repository (OPEN or CLAIM_PENDING)
+        all_candidates = self.item_repo.list_items(
             item_type=counterpart_type,
-            status="OPEN",
             limit=200
         )
+        candidates = [c for c in all_candidates if c.status in ("OPEN", "CLAIM_PENDING")]
 
         matches: List[MatchResult] = []
         for candidate in candidates:

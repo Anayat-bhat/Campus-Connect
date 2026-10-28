@@ -44,7 +44,7 @@ app = Flask(
     static_folder=os.path.join(PROJECT_ROOT, "web", "static")
 )
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "campusconnect_ultra_secure_dev_key_2026")
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB
+app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32 MB
 
 # Initialize Core Services
 db_path = DEFAULT_DB_PATH
@@ -99,6 +99,24 @@ def require_admin(func):
             return jsonify({"success": False, "error": "Administrator privileges required"}), 403
         return func(user, *args, **kwargs)
     return wrapper
+
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle payloads exceeding MAX_CONTENT_LENGTH with clean JSON."""
+    return jsonify({
+        "success": False,
+        "error": "The uploaded photograph or request exceeds the 32MB limit. Please upload a smaller photo."
+    }), 413
+
+
+@app.errorhandler(500)
+def handle_internal_server_error(error):
+    """Handle internal server errors with clean JSON."""
+    return jsonify({
+        "success": False,
+        "error": "An internal server error occurred while processing your request. Please try again."
+    }), 500
 
 
 def serialize_item(item: Item, viewer_id: Optional[int] = None) -> Dict[str, Any]:
@@ -478,6 +496,9 @@ def api_create_item(user: User):
 
     except ValueError as e:
         return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        print(f"[ERROR] Failed to create item report: {e}")
+        return jsonify({"success": False, "error": f"Failed to save item report: {str(e)}"}), 500
 
 
 @app.route("/api/items/<int:item_id>", methods=["DELETE"])
