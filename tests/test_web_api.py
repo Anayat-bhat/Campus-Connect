@@ -93,6 +93,14 @@ class WebApiTestCase(unittest.TestCase):
         self.assertIsNotNone(saved.image_path)
         self.assertTrue(saved.image_path.startswith("assets/uploads/"))
 
+        # Clean up test item
+        item_repo.delete(created_id)
+        if saved.image_path and os.path.exists(saved.image_path):
+            try:
+                os.remove(saved.image_path)
+            except OSError:
+                pass
+
 
 if __name__ == "__main__":
     unittest.main()
